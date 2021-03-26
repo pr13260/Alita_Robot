@@ -24,6 +24,7 @@ from traceback import format_exc
 
 from pyrogram import filters
 from pyrogram.errors import (
+    ChannelInvalid,
     ChannelPrivate,
     ChatAdminRequired,
     FloodWait,
@@ -46,6 +47,16 @@ from alita.utils.paste import paste
 
 # initialise database
 chatdb = Chats()
+
+
+@Alita.on_message(filters.command("ping", DEV_PREFIX_HANDLER) & sudo_filter)
+async def ping(_, m: Message):
+    LOGGER.info(f"{m.from_user.id} used ping cmd in {m.chat.id}")
+    start = time()
+    replymsg = await m.reply_text((tlang(m, "utils.ping.pinging")), quote=True)
+    delta_ping = time() - start
+    await replymsg.edit_text(f"<b>Pong!</b>\n{delta_ping * 1000:.3f} ms")
+    return
 
 
 @Alita.on_message(filters.command("logs", DEV_PREFIX_HANDLER) & dev_filter)
@@ -137,7 +148,7 @@ async def neofetch_stats(_, m: Message):
     try:
         await m.reply_text(OUTPUT, quote=True)
     except MessageTooLong:
-        with BytesIO(str.encode(remove_markdown_and_html(OUTPUT))) as f:
+        with BytesIO(str.encode(await remove_markdown_and_html(OUTPUT))) as f:
             f.name = "neofetch.txt"
             await m.reply_document(document=f, caption="neofetch result")
         await m.delete()
@@ -189,7 +200,7 @@ async def evaluate_code(c: Alita, m: Message):
     try:
         await sm.edit(final_output)
     except MessageTooLong:
-        with BytesIO(str.encode(remove_markdown_and_html(final_output))) as f:
+        with BytesIO(str.encode(await remove_markdown_and_html(final_output))) as f:
             f.name = "py.txt"
             await m.reply_document(
                 document=f,
@@ -241,7 +252,7 @@ async def execution(_, m: Message):
     try:
         await sm.edit_text(OUTPUT)
     except MessageTooLong:
-        with BytesIO(str.encode(remove_markdown_and_html(OUTPUT))) as f:
+        with BytesIO(str.encode(await remove_markdown_and_html(OUTPUT))) as f:
             f.name = "sh.txt"
             await m.reply_document(
                 document=f,
@@ -278,7 +289,7 @@ async def chats(c: Alita, m: Message):
     all_chats = (chatdb.get_all_chats()) or {}
     chatfile = tlang(m, "dev.chatlist.header")
     P = 1
-    for chat in all_chats:
+    for chat, val in all_chats:
         try:
             chat_info = await c.get_chat(chat["_id"])
             chat_members = chat_info.members_count
@@ -288,15 +299,15 @@ async def chats(c: Alita, m: Message):
                 invitelink = "No Link!"
             chatfile += "{}. {} | {} | {} | {}\n".format(
                 P,
-                chat["chat_name"],
-                chat["_id"],
+                val["chat_name"],
+                chat,
                 chat_members,
                 invitelink,
             )
             P += 1
         except ChatAdminRequired:
             pass
-        except ChannelPrivate:
+        except (ChannelPrivate, ChannelInvalid):
             chatdb.remove_chat(chat["_id"])
         except PeerIdInvalid:
             LOGGER.warning(f"Peer not found {chat['_id']}")
@@ -308,7 +319,7 @@ async def chats(c: Alita, m: Message):
             LOGGER.error(ef)
             await m.reply_text(f"**Error:**\n{ef}")
 
-    with BytesIO(str.encode(remove_markdown_and_html(chatfile))) as f:
+    with BytesIO(str.encode(await remove_markdown_and_html(chatfile))) as f:
         f.name = "chatlist.txt"
         await m.reply_document(
             document=f,
@@ -343,4 +354,35 @@ async def leave_chat(c: Alita, m: Message):
     except RPCError as ef:
         LOGGER.error(ef)
         await replymsg.edit_text(f"Failed to leave chat!\nError: <code>{ef}</code>.")
+    return
+
+
+@Alita.on_message(filters.command("chatbroadcast", DEV_PREFIX_HANDLER) & dev_filter)
+async def chat_broadcast(c: Alita, m: Message):
+    if m.reply_to_message:
+        msg = m.reply_to_message.text.markdown
+    else:
+        await m.reply_text("Reply to a message to broadcast it")
+        return
+
+    exmsg = await m.reply_text("Started broadcasting!")
+    all_chats = (chatdb.list_chats()) or {}
+    err_str = ""
+
+    for chat in all_chats:
+        try:
+            await c.send_message(chat, msg)
+        except RPCError as ef:
+            LOGGER.error(ef)
+            continue
+
+    await exmsg.edit_text("Done broadcasting ✅")
+    if err_str:
+        with BytesIO(str.encode(await remove_markdown_and_html(err_str))) as f:
+            f.name = "error_broadcast.txt"
+            await m.reply_document(
+                document=f,
+                caption="Broadcast Error",
+            )
+
     return

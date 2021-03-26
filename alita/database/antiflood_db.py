@@ -50,7 +50,7 @@ class AntiFlood:
             z = self.get_grp(chat_id)
             if z:
                 return z["status"]
-            return
+            return False
 
     def set_antiflood(self, chat_id: int, max_msg: int):
         with INSERTION_LOCK:
@@ -69,7 +69,7 @@ class AntiFlood:
             z = self.get_grp(chat_id)
             if z:
                 return z["max_msg"]
-            return
+            return 0
 
     def set_action(self, chat_id: int, action: str = "mute"):
         with INSERTION_LOCK:
@@ -93,7 +93,7 @@ class AntiFlood:
             z = self.get_grp(chat_id)
             if z:
                 return z["action"]
-        return
+        return "none"
 
     def get_all_antiflood_settings(self):
         return self.collection.find_all()
@@ -110,4 +110,3 @@ class AntiFlood:
                 new_data = old_chat_db.update({"_id": new_chat_id})
                 self.collection.delete_one({"_id": old_chat_id})
                 self.collection.insert_one(new_data)
-            return

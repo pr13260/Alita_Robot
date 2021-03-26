@@ -32,7 +32,7 @@ LOGDIR = f"{__name__}/logs"
 if not path.isdir(LOGDIR):
     mkdir(LOGDIR)
 
-LOGFILE = f"{LOGDIR}/{__name__}_{LOG_DATETIME}.txt"
+LOGFILE = f"{LOGDIR}/{__name__}_{LOG_DATETIME}.log"
 
 file_handler = FileHandler(filename=LOGFILE)
 stdout_handler = StreamHandler(stdout)
@@ -68,8 +68,14 @@ except Exception as ef:
     sysexit(1)
 
 
+LOGGER.info("------------------------")
+LOGGER.info("|      Alita_Robot     |")
+LOGGER.info("------------------------")
+LOGGER.info("Version: " + Config.VERSION)
+LOGGER.info("Owner: " + str(Config.OWNER_ID) + "\n")
+
 # Account Related
-TOKEN = Config.TOKEN
+STRING_SESSION = Config.STRING_SESSION
 APP_ID = Config.APP_ID
 API_HASH = Config.API_HASH
 
@@ -77,7 +83,6 @@ API_HASH = Config.API_HASH
 MESSAGE_DUMP = Config.MESSAGE_DUMP
 SUPPORT_GROUP = Config.SUPPORT_GROUP
 SUPPORT_CHANNEL = Config.SUPPORT_CHANNEL
-LOAD_ADMINS = Config.LOAD_ADMINS
 
 # Users Config
 OWNER_ID = Config.OWNER_ID
@@ -85,7 +90,7 @@ DEV_USERS = Config.DEV_USERS
 SUDO_USERS = Config.SUDO_USERS
 WHITELIST_USERS = Config.WHITELIST_USERS
 SUPPORT_STAFF = list(
-    dict.fromkeys([OWNER_ID] + SUDO_USERS + DEV_USERS + WHITELIST_USERS),
+    set([int(OWNER_ID)] + SUDO_USERS + DEV_USERS + WHITELIST_USERS),
 )  # Remove duplicates!
 
 # Plugins, DB and Workers
@@ -122,24 +127,46 @@ async def load_cmds(all_plugins):
     for single in all_plugins:
         # If plugin in NO_LOAD, skip the plugin
         if single.lower() in [i.lower() for i in Config.NO_LOAD]:
+            LOGGER.warning(f"Not loading '{single}' s it's added in NO_LOAD list")
             continue
+
         imported_module = imp_mod("alita.plugins." + single)
         if not hasattr(imported_module, "__PLUGIN__"):
-            imported_module.__PLUGIN__ = imported_module.__name__
+            continue
 
-        if not imported_module.__PLUGIN__.lower() in HELP_COMMANDS:
-            if hasattr(imported_module, "__help__") and imported_module.__help__:
-                HELP_COMMANDS[
-                    imported_module.__PLUGIN__.lower()
-                ] = imported_module.__help__
-            else:
+        plugin_name = imported_module.__PLUGIN__.lower()
+
+        if not plugin_name in HELP_COMMANDS:
+            HELP_COMMANDS[plugin_name] = {
+                "help_msg": "",
+                "buttons": [],
+                "alt_cmds": [],
+            }
+            if hasattr(imported_module, "__help__"):
+                HELP_COMMANDS[plugin_name]["help_msg"] = imported_module.__help__
+            if hasattr(imported_module, "__buttons__"):
+                HELP_COMMANDS[plugin_name]["buttons"] = imported_module.__buttons__
+            if hasattr(imported_module, "__alt_name__"):
+                HELP_COMMANDS[plugin_name]["alt_cmds"] = imported_module.__alt_name__
+
+            try:
+                # Add the plugin name to cmd list
+                (HELP_COMMANDS[plugin_name]["alt_cmds"]).append(
+                    plugin_name.split(".")[1],
+                )
+            except IndexError:
+                LOGGER.error(f"Not loading plugin '{plugin_name}' due to invalid name!")
                 continue
         else:
             raise Exception(
-                "Can't have two plugins with the same name! Please change one",
+                (
+                    "Can't have two plugins with the same name! Please change one\n"
+                    f"Error while importing '{imported_module.__name__}'"
+                ),
             )
 
-    LOGGER.info(f"Not loading Plugins - {NO_LOAD}")
+    if NO_LOAD:
+        LOGGER.warning(f"Not loading Plugins - {NO_LOAD}")
 
     return ", ".join(
         [(i.split(".")[1]).capitalize() for i in list(HELP_COMMANDS.keys())],

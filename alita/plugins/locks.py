@@ -26,41 +26,35 @@ from alita import LOGGER, PREFIX_HANDLER
 from alita.bot_class import Alita
 from alita.database.approve_db import Approve
 from alita.tr_engine import tlang
-from alita.utils.custom_filters import admin_filter
+from alita.utils.custom_filters import admin_filter, restrict_filter
 
 # initialise
 app_db = Approve()
 
-__PLUGIN__ = "plugins.locks.main"
-__help__ = "plugins.locks.help"
 
-
-@Alita.on_message(filters.command("locktypes", PREFIX_HANDLER) & filters.group)
+@Alita.on_message(filters.command("locktypes", PREFIX_HANDLER) & admin_filter)
 async def lock_types(_, m: Message):
-    locktypes_str = (
-        "**Lock Types:**\n"
-        " - `all` = Everything\n"
-        " - `msg` = Messages\n"
-        " - `media` = Media, such as photo and video.\n"
-        " - `polls` = Polls\n"
-        " - `invite` = Add users to group\n"
-        " - `pin` = Pin Messages\n"
-        " - `info` = Change Group Info\n"
-        " - `webprev` = Web Page Previews\n"
-        " - `inlinebots` = Inline bots\n"
-        " - `animations` = Animations\n"
-        " - `games` = Game Bots\n"
-        " - `stickers` = Stickers"
-    )
     await m.reply_text(
-        locktypes_str,
+        (
+            "**Lock Types:**\n"
+            " - `all` = Everything\n"
+            " - `msg` = Messages\n"
+            " - `media` = Media, such as Photo and Video.\n"
+            " - `polls` = Polls\n"
+            " - `invite` = Add users to Group\n"
+            " - `pin` = Pin Messages\n"
+            " - `info` = Change Group Info\n"
+            " - `webprev` = Web Page Previews\n"
+            " - `inlinebots`, `inline` = Inline bots\n"
+            " - `animations` = Animations\n"
+            " - `games` = Game Bots\n"
+            " - `stickers` = Stickers"
+        ),
     )
     return
 
 
-@Alita.on_message(
-    filters.command("lock", PREFIX_HANDLER) & filters.group & admin_filter,
-)
+@Alita.on_message(filters.command("lock", PREFIX_HANDLER) & restrict_filter)
 async def lock_perm(c: Alita, m: Message):
 
     msg = ""
@@ -103,6 +97,7 @@ async def lock_perm(c: Alita, m: Message):
     if lock_type == "all":
         try:
             await c.set_chat_permissions(chat_id, ChatPermissions())
+            LOGGER.info(f"{m.from_user.id} locked all permissions in {m.chat.id}")
             await prevent_approved(m)  # Don't lock permissions for approved users!
             await m.reply_text("🔒 " + (tlang(m, "locks.lock_all")))
         except ChatAdminRequired:
@@ -129,7 +124,7 @@ async def lock_perm(c: Alita, m: Message):
         games = False
         perm = "games"
 
-    elif lock_type == "inlinebots":
+    elif lock_type in ("inlinebots", "inline"):
         inlinebots = False
         perm = "inline bots"
 
@@ -174,6 +169,7 @@ async def lock_perm(c: Alita, m: Message):
                 can_pin_messages=pin,
             ),
         )
+        LOGGER.info(f"{m.from_user.id} locked selected permissions in {m.chat.id}")
         await prevent_approved(m)  # Don't lock permissions for approved users!
         await m.reply_text(
             "🔒 " + (tlang(m, "locks.locked_perm").format(perm=perm)),
@@ -183,9 +179,7 @@ async def lock_perm(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(
-    filters.command("locks", PREFIX_HANDLER) & filters.group & admin_filter,
-)
+@Alita.on_message(filters.command("locks", PREFIX_HANDLER) & restrict_filter)
 async def view_locks(_, m: Message):
 
     (
@@ -238,6 +232,7 @@ async def view_locks(_, m: Message):
                 vinvite=vinvite,
                 vpin=vpin,
             )
+            LOGGER.info(f"{m.from_user.id} used locks cmd in {m.chat.id}")
             await chkmsg.edit_text(permission_view_str)
 
         except RPCError as e_f:
@@ -247,9 +242,7 @@ async def view_locks(_, m: Message):
     return
 
 
-@Alita.on_message(
-    filters.command("unlock", PREFIX_HANDLER) & filters.group & admin_filter,
-)
+@Alita.on_message(filters.command("unlock", PREFIX_HANDLER) & restrict_filter)
 async def unlock_perm(c: Alita, m: Message):
 
     (
@@ -309,6 +302,7 @@ async def unlock_perm(c: Alita, m: Message):
                     can_add_web_page_previews=True,
                 ),
             )
+            LOGGER.info(f"{m.from_user.id} unlocked all permissions in {m.chat.id}")
             await prevent_approved(m)  # Don't lock permissions for approved users!
             await m.reply_text("🔓 " + (tlang(m, "locks.unlock_all")))
         except ChatAdminRequired:
@@ -335,7 +329,7 @@ async def unlock_perm(c: Alita, m: Message):
         ugames = True
         uperm = "games"
 
-    elif unlock_type == "inlinebots":
+    elif unlock_type in ("inlinebots", "inline"):
         uinlinebots = True
         uperm = "inline bots"
 
@@ -364,6 +358,7 @@ async def unlock_perm(c: Alita, m: Message):
         return
 
     try:
+        LOGGER.info(f"{m.from_user.id} unlocked selected permissions in {m.chat.id}")
         await c.set_chat_permissions(
             chat_id,
             ChatPermissions(
@@ -416,3 +411,8 @@ async def prevent_approved(m: Message):
         await sleep(0.1)
 
     return
+
+
+__PLUGIN__ = "plugins.locks.main"
+__help__ = "plugins.locks.help"
+__alt_name__ = ["grouplock", "lock", "grouplocks"]

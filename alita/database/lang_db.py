@@ -17,7 +17,9 @@
 
 
 from threading import RLock
+from time import time
 
+from alita import LOGGER
 from alita.database import MongoDB
 
 INSERTION_LOCK = RLock()
@@ -57,7 +59,7 @@ class Langs:
                     {"_id": chat_id},
                     {"lang": lang},
                 )
-                return
+                return "Updated language"
 
             LANG_DATA[chat_id] = {"chat_type": chat_type, "lang": lang}
             return self.collection.insert_one(
@@ -96,27 +98,29 @@ class Langs:
         global LANG_DATA
         with INSERTION_LOCK:
 
-            old_chat_local = self.get_grp(chat_id=old_chat_id)
-            if old_chat_local:
-                lang_dict = LANG_DATA[old_chat_id]
-                del LANG_DATA[old_chat_id]
-                LANG_DATA[new_chat_id] = lang_dict
+            try:
+                old_chat_local = self.get_grp(chat_id=old_chat_id)
+                if old_chat_local:
+                    lang_dict = LANG_DATA[old_chat_id]
+                    del LANG_DATA[old_chat_id]
+                    LANG_DATA[new_chat_id] = lang_dict
+            except KeyError:
+                pass
+
             old_chat_db = self.collection.find_one({"_id": old_chat_id})
             if old_chat_db:
                 new_data = old_chat_db.update({"_id": new_chat_id})
                 self.collection.delete_one({"_id": old_chat_id})
                 self.collection.insert_one(new_data)
-            return
 
 
 def __load_all_langs():
     global LANG_DATA
+    start = time()
     db = Langs()
-    for chat in db.get_all_langs():
-        chat_id = chat["_id"]
-        chat_type = chat["chat_type"]
-        lang = chat["lang"]
-        LANG_DATA[chat_id] = {"lang": lang, "chat_type": chat_type}
-
-
-__load_all_langs()
+    langs_data = db.get_all_langs()
+    LANG_DATA = {
+        int(chat["_id"]): {"lang": chat["lang"], "chat_type": chat["chat_type"]}
+        for chat in langs_data
+    }
+    LOGGER.info(f"Loaded Lang Cache - {round((time()-start),3)}s")

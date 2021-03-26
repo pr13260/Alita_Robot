@@ -22,12 +22,14 @@ from pyrogram.types import Message
 
 from alita import LOGGER
 from alita.bot_class import Alita
+from alita.database.antichannelpin_db import Pins
 from alita.database.antiflood_db import AntiFlood
 from alita.database.approve_db import Approve
 from alita.database.blacklist_db import Blacklist
 from alita.database.chats_db import Chats
+from alita.database.filters_db import Filters
 from alita.database.lang_db import Langs
-from alita.database.notes_db import Notes
+from alita.database.notes_db import Notes, NotesSettings
 from alita.database.reporting_db import Reporting
 from alita.database.rules_db import Rules
 from alita.database.users_db import Users
@@ -42,9 +44,12 @@ bldb = Blacklist()
 flooddb = AntiFlood()
 approvedb = Approve()
 reportdb = Reporting()
+notes_settings = NotesSettings()
+pins_db = Pins()
+fldb = Filters()
 
 
-@Alita.on_message(filters.group, group=-1)
+@Alita.on_message(filters.group, group=4)
 async def initial_works(_, m: Message):
     try:
         if m.migrate_to_chat_id or m.migrate_from_chat_id:
@@ -122,7 +127,7 @@ async def initial_works(_, m: Message):
 
 
 async def migrate_chat(old_chat, new_chat):
-    LOGGER.info(f"Migrating from {old_chat} to {new_chat}")
+    LOGGER.info(f"Migrating from {old_chat} to {new_chat}...")
     userdb.migrate_chat(old_chat, new_chat)
     langdb.migrate_chat(old_chat, new_chat)
     ruledb.migrate_chat(old_chat, new_chat)
@@ -131,4 +136,7 @@ async def migrate_chat(old_chat, new_chat):
     flooddb.migrate_chat(old_chat, new_chat)
     approvedb.migrate_chat(old_chat, new_chat)
     reportdb.migrate_chat(old_chat, new_chat)
-    LOGGER.info("Successfully migrated!")
+    notes_settings.migrate_chat(old_chat, new_chat)
+    pins_db.migrate_chat(old_chat, new_chat)
+    fldb.migrate_chat(old_chat, new_chat)
+    LOGGER.info(f"Successfully migrated from {old_chat} to {new_chat}!")

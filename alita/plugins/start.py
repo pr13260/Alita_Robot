@@ -25,146 +25,55 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import HELP_COMMANDS, LOGGER, OWNER_ID, PREFIX_HANDLER, VERSION
+from alita import HELP_COMMANDS, LOGGER, PREFIX_HANDLER
 from alita.bot_class import Alita
 from alita.tr_engine import tlang
+from alita.utils.start_utils import (
+    gen_cmds_kb,
+    gen_start_kb,
+    get_help_msg,
+    get_private_note,
+    get_private_rules,
+)
 
 
-async def gen_cmds_kb(m):
-    """Generate the keyboard for languages."""
-    if isinstance(m, CallbackQuery):
-        m = m.message
-
-    cmds = sorted(list(HELP_COMMANDS.keys()))
-    kb = []
-
-    while cmds:
-        if cmds:
-            cmd = cmds[0]
-            a = [
-                InlineKeyboardButton(
-                    tlang(m, cmd),
-                    callback_data=f"get_mod.{cmd.lower()}",
-                ),
-            ]
-            cmds.pop(0)
-        if cmds:
-            cmd = cmds[0]
-            a.append(
-                InlineKeyboardButton(
-                    tlang(m, cmd),
-                    callback_data=f"get_mod.{cmd.lower()}",
-                ),
-            )
-            cmds.pop(0)
-        if cmds:
-            cmd = cmds[0]
-            a.append(
-                InlineKeyboardButton(
-                    tlang(m, cmd),
-                    callback_data=f"get_mod.{cmd.lower()}",
-                ),
-            )
-            cmds.pop(0)
-        kb.append(a)
-    return kb
-
-
-async def gen_start_kb(q):
-    """Generate keyboard with start menu options."""
-
-    from alita import BOT_USERNAME
-
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    f"📚 {(tlang(q, 'start.commands_btn'))}",
-                    callback_data="commands",
-                ),
-                InlineKeyboardButton(
-                    f"ℹ️ {(tlang(q, 'start.infos_btn'))}",
-                    callback_data="infos",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    f"🌐 {(tlang(q, 'start.language_btn'))}",
-                    callback_data="chlang",
-                ),
-                InlineKeyboardButton(
-                    f"➕ {(tlang(q, 'start.add_chat_btn'))}",
-                    url=f"https://t.me/{BOT_USERNAME}?startgroup=new",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    f"🗃️ {(tlang(q, 'start.source_code'))}",
-                    url="https://github.com/Divkix/Alita_Robot",
-                ),
-            ],
-        ],
-    )
-    return keyboard
-
-
-async def get_help_msg(m, help_option: str):
-    """Helper function for getting help_msg and it's keyboard."""
-    help_msg = None
-    help_kb = None
-
-    if help_option == "help":
-        help_msg = tlang(m, "general.commands_available")
-        help_kb = InlineKeyboardMarkup(
-            [
-                *(await gen_cmds_kb(m)),
-                [
-                    InlineKeyboardButton(
-                        f"« {(tlang(m, 'general.back_btn'))}",
-                        callback_data="start_back",
-                    ),
-                ],
-            ],
-        )
-    else:
-        help_cmd_keys = sorted(
-            [i.split(".")[1].lower() for i in list(HELP_COMMANDS.keys())],
-        )
-        if help_option in help_cmd_keys:
-            help_option_value = HELP_COMMANDS[f"plugins.{help_option}.main"]
-            help_msg = tlang(m, help_option_value)
-            help_kb = InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            f"« {(tlang(m, 'general.back_btn'))}",
-                            callback_data="commands",
-                        ),
-                    ],
-                ],
-            )
-
-    return help_msg, help_kb
+@Alita.on_message(
+    filters.command("donate", PREFIX_HANDLER) & (filters.group | filters.private),
+)
+async def donate(_, m: Message):
+    LOGGER.info(f"{m.from_user.id} fetched donation text in {m.chat.id}")
+    await m.reply_text(tlang(m, "general.donate_owner"))
+    return
 
 
 @Alita.on_message(
     filters.command("start", PREFIX_HANDLER) & (filters.group | filters.private),
 )
-async def start(_, m: Message):
+async def start(c: Alita, m: Message):
 
     if m.chat.type == "private":
         if len(m.text.split()) > 1:
             help_option = (m.text.split(None, 1)[1]).lower()
+
+            if help_option.startswith("note"):
+                await get_private_note(c, m, help_option)
+                return
+            if help_option.startswith("rules"):
+                LOGGER.info(f"{m.from_user.id} fetched privaterules in {m.chat.id}")
+                await get_private_rules(c, m, help_option)
+                return
+
             help_msg, help_kb = await get_help_msg(m, help_option)
 
-            if help_msg is None:
+            if not help_msg:
                 return
 
             await m.reply_text(
                 help_msg,
                 parse_mode="markdown",
-                reply_markup=help_kb,
+                reply_markup=InlineKeyboardMarkup(help_kb),
                 quote=True,
+                disable_web_page_preview=True,
             )
             return
         try:
@@ -172,6 +81,7 @@ async def start(_, m: Message):
                 (tlang(m, "start.private")),
                 reply_markup=(await gen_start_kb(m)),
                 quote=True,
+                disable_web_page_preview=True,
             )
         except UserIsBlocked:
             LOGGER.warning(f"Bot blocked by {m.from_user.id}")
@@ -190,6 +100,7 @@ async def start_back(_, q: CallbackQuery):
         await q.message.edit_text(
             (tlang(q, "start.private")),
             reply_markup=(await gen_start_kb(q.message)),
+            disable_web_page_preview=True,
         )
     except MessageNotModified:
         pass
@@ -216,6 +127,8 @@ async def commands_menu(_, q: CallbackQuery):
             (tlang(q, "general.commands_available")),
             reply_markup=keyboard,
         )
+    except MessageNotModified:
+        pass
     except QueryIdInvalid:
         await q.message.reply_text(
             (tlang(q, "general.commands_available")),
@@ -233,14 +146,21 @@ async def help_menu(_, m: Message):
     if len(m.text.split()) >= 2:
         help_option = (m.text.split(None, 1)[1]).lower()
         help_msg, help_kb = await get_help_msg(m, help_option)
-        if help_msg is None:
+
+        if not help_msg:
+            LOGGER.error(f"No help_msg found for help_option - {help_option}!!")
             return
+
+        LOGGER.info(
+            f"{m.from_user.id} fetched help for '{help_option}' text in {m.chat.id}",
+        )
         if m.chat.type == "private":
             await m.reply_text(
                 help_msg,
                 parse_mode="markdown",
-                reply_markup=help_kb,
+                reply_markup=InlineKeyboardMarkup(help_kb),
                 quote=True,
+                disable_web_page_preview=True,
             )
         else:
             await m.reply_text(
@@ -259,7 +179,7 @@ async def help_menu(_, m: Message):
     else:
         if m.chat.type == "private":
             keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
+                [
                     *(await gen_cmds_kb(m)),
                     [
                         InlineKeyboardButton(
@@ -295,53 +215,24 @@ async def help_menu(_, m: Message):
 async def get_module_info(_, q: CallbackQuery):
 
     module = q.data.split(".", 1)[1]
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "« " + (tlang(q, "general.back_btn")),
-                    callback_data="commands",
-                ),
-            ],
-        ],
+
+    help_msg = f"**{(tlang(q, str(module)))}:**\n\n" + tlang(
+        q,
+        HELP_COMMANDS[module]["help_msg"],
     )
-    help_msg = tlang(q, HELP_COMMANDS[module])
+
+    help_kb = HELP_COMMANDS[module]["buttons"] + [
+        [
+            InlineKeyboardButton(
+                "« " + (tlang(q, "general.back_btn")),
+                callback_data="commands",
+            ),
+        ],
+    ]
     await q.message.edit_text(
         help_msg,
         parse_mode="markdown",
-        reply_markup=keyboard,
-    )
-    await q.answer()
-    return
-
-
-@Alita.on_callback_query(filters.regex("^infos$"))
-async def infos(c: Alita, q: CallbackQuery):
-
-    _owner = await c.get_users(OWNER_ID)
-    res = (tlang(q, "start.info_page")).format(
-        Owner=(
-            f"{_owner.first_name} + {_owner.last_name}"
-            if _owner.last_name
-            else _owner.first_name
-        ),
-        ID=OWNER_ID,
-        version=VERSION,
-    )
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    f"« {(tlang(q, 'general.back_btn'))}",
-                    callback_data="start_back",
-                ),
-            ],
-        ],
-    )
-    await q.message.edit_text(
-        res,
-        reply_markup=keyboard,
-        disable_web_page_preview=True,
+        reply_markup=InlineKeyboardMarkup(help_kb),
     )
     await q.answer()
     return

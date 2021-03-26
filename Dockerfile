@@ -1,10 +1,7 @@
-FROM python:3.9.2-slim-buster
+FROM bitnami/python:3.9.2-prod
 
 # Don't use cached python packages
 ENV PIP_NO_CACHE_DIR 1
-
-# Add new fast source
-RUN sed -i.bak 's/us-west-2\.ec2\.//' /etc/apt/sources.list
 
 # Installing Required Packages
 RUN apt update && \
@@ -14,11 +11,12 @@ RUN apt update && \
     python3-dev \
     python3-lxml \
     gcc \
+    git \
     make \
     neofetch
 
 # Clear apt lists
-RUN rm -rf /var/lib/apt/lists/*
+RUN rm -rf /var/lib/apt/lists /var/cache/apt/archives /tmp
 
 # Enter Workplace
 WORKDIR /app/
@@ -27,6 +25,9 @@ WORKDIR /app/
 COPY . .
 
 # Install dependencies
+RUN pip3 install --upgrade pip
+RUN rm -r /opt/bitnami/python/lib/python3.9/site-packages/setuptools*
+RUN pip3 install --upgrade setuptools
 RUN make install
 
 # Run the bot

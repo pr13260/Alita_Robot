@@ -22,23 +22,22 @@ from pyrogram import filters
 from pyrogram.errors import (
     ChatAdminInviteRequired,
     ChatAdminRequired,
-    PeerIdInvalid,
     RightForbidden,
     RPCError,
     UserAdminInvalid,
 )
 from pyrogram.types import Message
 
-from alita import LOGGER, PREFIX_HANDLER, SUPPORT_GROUP
+from alita import LOGGER, PREFIX_HANDLER, SUPPORT_GROUP, SUPPORT_STAFF
 from alita.bot_class import Alita
+from alita.database.approve_db import Approve
 from alita.tr_engine import tlang
-from alita.utils.admin_cache import ADMIN_CACHE, admin_cache_reload
+from alita.utils.caching import ADMIN_CACHE, TEMP_ADMIN_CACHE_BLOCK, admin_cache_reload
 from alita.utils.custom_filters import admin_filter, invite_filter, promote_filter
 from alita.utils.extract_user import extract_user
 from alita.utils.parser import mention_html
 
-__PLUGIN__ = "plugins.admin.main"
-__help__ = "plugins.admin.help"
+app_db = Approve()
 
 
 @Alita.on_message(filters.command("adminlist", PREFIX_HANDLER) & filters.group)
@@ -49,38 +48,28 @@ async def adminlist_show(_, m: Message):
             admin_list = ADMIN_CACHE[m.chat.id]
             note = tlang(m, "admin.adminlist.note_cached")
         except KeyError:
-            admin_list = []
-            async for i in m.chat.iter_members(
-                filter="administrators",
-            ):
-                if i.user.is_deleted or i.user.is_bot:
-                    continue  # We don't need deleted accounts or bot accounts
-                admin_list.append(
-                    (
-                        i.user.id,
-                        ("@" + i.user.username)
-                        if i.user.username
-                        else i.user.first_name,
-                    ),
-                )
-            admin_list = sorted(admin_list, key=lambda x: x[1])
+            admin_list = await admin_cache_reload(m, "adminlist")
             note = tlang(m, "admin.adminlist.note_updated")
-            ADMIN_CACHE[m.chat.id] = admin_list
 
         adminstr = (tlang(m, "admin.adminlist.adminstr")).format(
             chat_title=m.chat.title,
         ) + "\n\n"
 
-        for i in admin_list:
-            try:
-                mention = (
-                    i[1] if i[1].startswith("@") else (await mention_html(i[1], i[0]))
-                )
-                adminstr += f"- {mention}\n"
-            except PeerIdInvalid:
-                pass
+        # format is like: (user_id, username/name,anonyamous or not)
+        mention = [
+            (
+                admin[1]
+                if admin[1].startswith("@")
+                else (await mention_html(admin[1], admin[0]))
+            )
+            for admin in admin_list
+            if not admin[2]  # if non-anonyamous admin
+        ]
+        mention.sort(key=lambda x: x[1])
+        adminstr += "\n".join([f"- {i}" for i in mention])
 
-        await m.reply_text(adminstr + "\n" + note)
+        await m.reply_text(adminstr + "\n\n" + note)
+        LOGGER.info(f"Adminlist cmd use in {m.chat.id} by {m.from_user.id}")
 
     except Exception as ef:
         if str(ef) == str(m.chat.id):
@@ -93,19 +82,30 @@ async def adminlist_show(_, m: Message):
                     ef=ef,
                 ),
             )
-            LOGGER.error(ef)
+        LOGGER.error(ef)
         LOGGER.error(format_exc())
 
     return
 
 
 @Alita.on_message(
-    filters.command("admincache", PREFIX_HANDLER) & filters.group & admin_filter,
+    filters.command("admincache", PREFIX_HANDLER) & admin_filter,
 )
 async def reload_admins(_, m: Message):
+    global TEMP_ADMIN_CACHE_BLOCK
+
+    if (m.chat.id in set(TEMP_ADMIN_CACHE_BLOCK.keys())) and (
+        m.from_user.id not in SUPPORT_STAFF
+    ):
+        if TEMP_ADMIN_CACHE_BLOCK[m.chat.id] == "manualblock":
+            await m.reply_text("Can only reload admin cache once per 10 mins!")
+            return
+
     try:
-        await admin_cache_reload(m)
+        await admin_cache_reload(m, "admincache")
+        TEMP_ADMIN_CACHE_BLOCK[m.chat.id] = "manualblock"
         await m.reply_text(tlang(m, "admin.adminlist.reloaded_admins"))
+        LOGGER.info(f"Admincache cmd use in {m.chat.id} by {m.from_user.id}")
     except RPCError as ef:
         await m.reply_text(
             (tlang(m, "general.some_error")).format(
@@ -114,19 +114,41 @@ async def reload_admins(_, m: Message):
             ),
         )
         LOGGER.error(ef)
+        LOGGER.error(format_exc())
     return
 
 
 @Alita.on_message(
-    filters.command("promote", PREFIX_HANDLER) & filters.group & promote_filter,
+    filters.command("promote", PREFIX_HANDLER) & promote_filter,
 )
 async def promote_usr(c: Alita, m: Message):
+    from alita import BOT_ID
+
+    global ADMIN_CACHE
 
     if len(m.text.split()) == 1 and not m.reply_to_message:
         await m.reply_text(tlang(m, "admin.promote.no_target"))
         return
 
-    user_id, user_first_name = await extract_user(c, m)
+    user_id, user_first_name, user_name = await extract_user(c, m)
+
+    if user_id == BOT_ID:
+        await m.reply_text("Huh, how can I even promote myself?")
+        return
+
+    # If user is alreay admin
+    try:
+        admin_list = {i[0] for i in ADMIN_CACHE[m.chat.id]}
+    except KeyError:
+        admin_list = {
+            i[0] for i in (await admin_cache_reload(m, "promote_cache_update"))
+        }
+
+    if user_id in admin_list:
+        await m.reply_text(
+            "This user is already an admin, how am I supposed to re-promote them?",
+        )
+        return
 
     try:
         await m.chat.promote_member(
@@ -136,7 +158,10 @@ async def promote_usr(c: Alita, m: Message):
             can_restrict_members=True,
             can_invite_users=True,
             can_pin_messages=True,
+            can_manage_voice_chats=False,
         )
+        LOGGER.info(f"{m.from_user.id} promoted {user_id} in {m.chat.id}")
+
         await m.reply_text(
             (tlang(m, "admin.promote.promoted_user")).format(
                 promoter=(await mention_html(m.from_user.first_name, m.from_user.id)),
@@ -145,40 +170,30 @@ async def promote_usr(c: Alita, m: Message):
             ),
         )
 
+        if len(m.text.split()) == 3 and not m.reply_to_message:
+            await c.set_administrator_title(m.chat.id, user_id, m.text.split()[2])
+        elif len(m.text.split()) == 2 and m.reply_to_message:
+            await c.set_administrator_title(m.chat.id, user_id, m.text.split()[1])
+
+        # If user is approved, disapprove them as they willbe promoted and get even more rights
+        if app_db.check_approve(m.chat.id, user_id):
+            app_db.remove_approve(m.chat.id, user_id)
+
         # ----- Add admin to temp cache -----
         try:
-            global ADMIN_CACHE
-            admin_list = ADMIN_CACHE[m.chat.id]  # Load Admins from cached list
+            inp1 = user_name if user_name else user_first_name
+            admins_group = ADMIN_CACHE[m.chat.id]
+            admins_group.append((user_id, inp1))
+            ADMIN_CACHE[m.chat.id] = admins_group
         except KeyError:
-            admin_list = []
-            async for i in m.chat.iter_members(filter="administrators"):
-                if (
-                    i.user.is_deleted or i.user.is_bot
-                ):  # Don't cache deleted users and bots!
-                    continue
-                admin_list.append(
-                    (
-                        i.user.id,
-                        ("@" + i.user.username)
-                        if i.user.username
-                        else i.user.first_name,
-                    ),
-                )
-
-        u = await m.chat.get_member(user_id)
-        admin_list.append(
-            [
-                u.user.id,
-                ("@" + u.user.username) if u.user.username else u.user.first_name,
-            ],
-        )
-        admin_list = sorted(admin_list, key=lambda x: x[1])
-        ADMIN_CACHE[m.chat.id] = admin_list
+            await admin_cache_reload(m, "promote_key_error")
 
     except ChatAdminRequired:
         await m.reply_text(tlang(m, "admin.not_admin"))
     except RightForbidden:
         await m.reply_text(tlang(m, "admin.promote.bot_no_right"))
+    except UserAdminInvalid:
+        await m.reply_text(tlang(m, "admin.user_admin_invalid"))
     except RPCError as ef:
         await m.reply_text(
             (tlang(m, "general.some_error")).format(
@@ -187,20 +202,43 @@ async def promote_usr(c: Alita, m: Message):
             ),
         )
         LOGGER.error(ef)
+        LOGGER.error(format_exc())
 
     return
 
 
 @Alita.on_message(
-    filters.command("demote", PREFIX_HANDLER) & filters.group & promote_filter,
+    filters.command("demote", PREFIX_HANDLER) & promote_filter,
 )
 async def demote_usr(c: Alita, m: Message):
+    from alita import BOT_ID
+
+    global ADMIN_CACHE
 
     if len(m.text.split()) == 1 and not m.reply_to_message:
         await m.reply_text(tlang(m, "admin.demote.no_target"))
         return
 
-    user_id, user_first_name = await extract_user(c, m)
+    user_id, user_first_name, _ = await extract_user(c, m)
+
+    if user_id == BOT_ID:
+        await m.reply_text("Get an admin to demote me!")
+        return
+
+    # If user not alreay admin
+    try:
+        admin_list = {i[0] for i in ADMIN_CACHE[m.chat.id]}
+    except KeyError:
+        admin_list = {
+            i[0] for i in (await admin_cache_reload(m, "demote_cache_update"))
+        }
+
+    if user_id not in admin_list:
+        await m.reply_text(
+            "This user is not an admin, how am I supposed to re-demote them?",
+        )
+        return
+
     try:
         await m.chat.promote_member(
             user_id=user_id,
@@ -209,7 +247,19 @@ async def demote_usr(c: Alita, m: Message):
             can_restrict_members=False,
             can_invite_users=False,
             can_pin_messages=False,
+            can_manage_voice_chats=False,
         )
+        LOGGER.info(f"{m.from_user.id} demoted {user_id} in {m.chat.id}")
+
+        # ----- Remove admin from cache -----
+        try:
+            admin_list = ADMIN_CACHE[m.chat.id]
+            user = next(user for user in admin_list if user[0] == user_id)
+            admin_list.remove(user)
+            ADMIN_CACHE[m.chat.id] = admin_list
+        except (KeyError, StopIteration):
+            await admin_cache_reload(m, "demote_key_stopiter_error")
+
         await m.reply_text(
             (tlang(m, "admin.demote.demoted_user")).format(
                 demoter=(await mention_html(m.from_user.first_name, m.from_user.id)),
@@ -217,28 +267,6 @@ async def demote_usr(c: Alita, m: Message):
                 chat_title=m.chat.title,
             ),
         )
-
-        # ----- Remove admin from cache -----
-        try:
-            global ADMIN_CACHE
-            admin_list = ADMIN_CACHE[m.chat.id]
-            user = next(user for user in admin_list if user[0] == user_id)
-            admin_list.remove(user)
-        except (KeyError, StopIteration):
-            admin_list = []
-            async for i in m.chat.iter_members(filter="administrators"):
-                if i.user.is_deleted or i.user.is_bot:
-                    continue
-                admin_list.append(
-                    [
-                        i.user.id,
-                        ("@" + i.user.username)
-                        if i.user.username
-                        else i.user.first_name,
-                    ],
-                )
-            admin_list = sorted(admin_list, key=lambda x: x[1])
-            ADMIN_CACHE[m.chat.id] = admin_list
 
     except ChatAdminRequired:
         await m.reply_text(tlang(m, "admin.not_admin"))
@@ -254,12 +282,13 @@ async def demote_usr(c: Alita, m: Message):
             ),
         )
         LOGGER.error(ef)
+        LOGGER.error(format_exc())
 
     return
 
 
 @Alita.on_message(
-    filters.command("invitelink", PREFIX_HANDLER) & filters.group & invite_filter,
+    filters.command("invitelink", PREFIX_HANDLER) & invite_filter,
 )
 async def get_invitelink(c: Alita, m: Message):
 
@@ -272,6 +301,7 @@ async def get_invitelink(c: Alita, m: Message):
             ),
             disable_web_page_preview=True,
         )
+        LOGGER.info(f"{m.from_user.id} exported invite link in {m.chat.id}")
     except ChatAdminRequired:
         await m.reply_text(tlang(m, "admin.not_admin"))
     except ChatAdminInviteRequired:
@@ -286,5 +316,10 @@ async def get_invitelink(c: Alita, m: Message):
             ),
         )
         LOGGER.error(ef)
+        LOGGER.error(format_exc())
 
     return
+
+
+__PLUGIN__ = "plugins.admin.main"
+__help__ = "plugins.admin.help"

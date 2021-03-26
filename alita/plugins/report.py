@@ -37,9 +37,6 @@ from alita.utils.parser import mention_html
 #  initialise
 db = Reporting()
 
-__PLUGIN__ = "plugins.reporting.main"
-__help__ = "plugins.reporting.help"
-
 
 @Alita.on_message(
     filters.command("reports", PREFIX_HANDLER) & (filters.private | admin_filter),
@@ -52,12 +49,14 @@ async def report_setting(_, m: Message):
             option = args[1].lower()
             if option in ("yes", "on", "true"):
                 db.set_settings(m.chat.id, True)
+                LOGGER.info(f"{m.from_user.id} enabled reports for them")
                 await m.reply_text(
                     "Turned on reporting! You'll be notified whenever anyone reports something in groups you are admin.",
                 )
 
             elif option in ("no", "off", "false"):
                 db.set_settings(m.chat.id, False)
+                LOGGER.info(f"{m.from_user.id} disabled reports for them")
                 await m.reply_text("Turned off reporting! You wont get any reports.")
         else:
             await m.reply_text(
@@ -68,6 +67,7 @@ async def report_setting(_, m: Message):
             option = args[1].lower()
             if option in ("yes", "on", "true"):
                 db.set_settings(m.chat.id, True)
+                LOGGER.info(f"{m.from_user.id} enabled reports in {m.chat.id}")
                 await m.reply_text(
                     "Turned on reporting! Admins who have turned on reports will be notified when /report "
                     "or @admin is called.",
@@ -76,6 +76,7 @@ async def report_setting(_, m: Message):
 
             elif option in ("no", "off", "false"):
                 db.set_settings(m.chat.id, False)
+                LOGGER.info(f"{m.from_user.id} disabled reports in {m.chat.id}")
                 await m.reply_text(
                     "Turned off reporting! No admins will be notified on /report or @admin.",
                     quote=True,
@@ -156,6 +157,17 @@ async def report_watcher(c: Alita, m: Message):
             ],
         )
 
+        LOGGER.info(
+            f"{m.from_user.id} reported msgid-{m.reply_to_message.message_id} to admins in {m.chat.id}",
+        )
+        await m.reply_text(
+            (
+                f"{(await mention_html(m.from_user.first_name, m.from_user.id))} "
+                "reported the message to the admins."
+            ),
+            quote=True,
+        )
+
         for admin in admin_list:
             if (
                 admin.user.is_bot or admin.user.is_deleted
@@ -171,41 +183,33 @@ async def report_watcher(c: Alita, m: Message):
                         disable_web_page_preview=True,
                     )
 
-                    if should_forward:
-                        # forward the reported message
-                        await m.reply_to_message.forward(admin.user.id)
+                    # TODO - fix message.forward
+                    # if should_forward:
+                    #     # forward the reported message
+                    #     await m.reply_to_message.forward(admin.user.id)
 
-                        if len(m.text.split()) > 1:
-                            # If user is giving a reason, send his message too
-                            await m.forward(admin.user.id)
+                    #     if len(m.text.split()) > 1:
+                    #         # If user is giving a reason, send his message too
+                    #         await m.forward(admin.user.id)
 
                 except (Unauthorized, UserIsBlocked, PeerIdInvalid):
                     pass
                 except RPCError as ef:
                     LOGGER.error(ef)
                     LOGGER.error(format_exc())
-
-        await m.reply_text(
-            (
-                f"{(await mention_html(m.from_user.first_name, m.from_user.id))} "
-                "reported the message to the admins."
-            ),
-            quote=True,
-        )
-        return
     return
 
 
 @Alita.on_callback_query(filters.regex("^report_"))
 async def report_buttons(c: Alita, q: CallbackQuery):
-    splitter = str(q.data).replace("report_", "").split("=")
+    splitter = (str(q.data).replace("report_", "")).split("=")
     chat_id = int(splitter[0])
     action = str(splitter[1])
     user_id = int(splitter[2])
     message_id = int(splitter[3])
     if action == "kick":
         try:
-            await c.kick_chat_member(chat_id, user_id, until_date=(time() + 45))
+            await c.kick_chat_member(chat_id, user_id, until_date=int(time() + 45))
             await q.answer("✅ Succesfully kicked")
             return
         except RPCError as err:
@@ -230,5 +234,9 @@ async def report_buttons(c: Alita, q: CallbackQuery):
                 f"🛑 Failed to delete message!\n<b>Error:</b>\n`{err}`",
                 show_alert=True,
             )
-    await q.answer()
     return
+
+
+__PLUGIN__ = "plugins.reporting.main"
+__help__ = "plugins.reporting.help"
+__alt_name__ = ["reports", "report"]

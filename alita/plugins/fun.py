@@ -28,9 +28,6 @@ from alita.tr_engine import tlang
 from alita.utils import fun_strings
 from alita.utils.extract_user import extract_user
 
-__PLUGIN__ = "plugins.fun.main"
-__help__ = "plugins.fun.help"
-
 
 @Alita.on_message(filters.command("shout", PREFIX_HANDLER))
 async def fun_shout(_, m: Message):
@@ -71,7 +68,8 @@ async def fun_slap(c: Alita, m: Message):
 
     if user_id == me.id:
         temp = choice(fun_strings.SLAP_ALITA_TEMPLATES)
-        return
+    else:
+        temp = choice(fun_strings.SLAP_TEMPLATES)
 
     if user_id:
         slapped_user = await c.get_users(user_id)
@@ -82,7 +80,6 @@ async def fun_slap(c: Alita, m: Message):
         user1 = me.first_name
         user2 = curr_user
 
-    temp = choice(fun_strings.SLAP_ALITA_TEMPLATES)
     item = choice(fun_strings.ITEMS)
     hit = choice(fun_strings.HIT)
     throw = choice(fun_strings.THROW)
@@ -135,3 +132,7 @@ async def fun_table(_, m: Message):
     reply_text = m.reply_to_message.reply_text if m.reply_to_message else m.reply_text
     await reply_text(choice(fun_strings.REACTIONS))
     return
+
+
+__PLUGIN__ = "plugins.fun.main"
+__help__ = "plugins.fun.help"

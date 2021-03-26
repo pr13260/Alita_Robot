@@ -16,18 +16,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import uvloop
+from uvloop import install
 
 # Install uvloop
-uvloop.install()
+install()
 
-from os import makedirs, path
+
 from platform import python_version
 from threading import RLock
-from time import time
 
 from pyrogram import Client, __version__
-from pyrogram.errors import ChannelInvalid, PeerIdInvalid, RPCError
 from pyrogram.raw.all import layer
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -35,13 +33,12 @@ from alita import (
     API_HASH,
     APP_ID,
     BOT_USERNAME,
-    LOAD_ADMINS,
     LOG_DATETIME,
     LOGFILE,
     LOGGER,
     MESSAGE_DUMP,
     NO_LOAD,
-    TOKEN,
+    STRING_SESSION,
     WORKERS,
     get_self,
     load_cmds,
@@ -50,7 +47,6 @@ from alita.database import MongoDB
 from alita.database.chats_db import Chats
 from alita.plugins import all_plugins
 from alita.tr_engine import lang_dict
-from alita.utils.admin_cache import ADMIN_CACHE
 from alita.utils.paste import paste
 
 chatdb = Chats()
@@ -69,78 +65,13 @@ class Alita(Client):
     def __init__(self):
         name = self.__class__.__name__.lower()
 
-        # Make a temporary direcory for storing session file
-        session_dir = f"{name}/SESSION"
-        if not path.isdir(session_dir):
-            makedirs(session_dir)
-
         super().__init__(
-            name,
+            STRING_SESSION,
             plugins=dict(root=f"{name}.plugins", exclude=NO_LOAD),
-            workdir=session_dir,
             api_id=APP_ID,
             api_hash=API_HASH,
-            bot_token=TOKEN,
             workers=WORKERS,
         )
-
-    async def get_admins(self):
-        """Cache all admins from chats in local DB."""
-        with INITIAL_LOCK:
-
-            global ADMIN_CACHE
-
-            LOGGER.info("Begin caching admins...")
-            begin = time()
-
-            all_chats = (chatdb.list_chats()) or []  # Get list of all chats
-            LOGGER.info(all_chats)
-            LOGGER.info(f"{len(all_chats)} chats loaded from database.")
-
-            for chat_id in all_chats:
-                admin_list = []
-                try:
-                    async for j in self.iter_chat_members(
-                        chat_id=chat_id,
-                        filter="administrators",
-                    ):
-                        if j.user.is_deleted or j.user.is_bot:
-                            continue
-                        admin_list.append(
-                            (
-                                j.user.id,
-                                f"@{j.user.username}"
-                                if j.user.username
-                                else j.user.first_name,
-                            ),
-                        )
-                except PeerIdInvalid:
-                    # Didn't meet group or saw any message from it
-                    continue
-                except ChannelInvalid:
-                    # Bot removed from that group
-                    chatdb.remove_chat(chat_id)
-                    LOGGER.warning(
-                        f"Removing chat {chat_id} from database as I'm not in it!",
-                    )
-                    continue
-                except RPCError as ef:
-                    LOGGER.error(ef)
-
-                admin_list = sorted(admin_list, key=lambda x: x[1])
-                ADMIN_CACHE[chat_id] = admin_list  # Remove the last space
-
-                LOGGER.info(
-                    f"Set {len(admin_list)} admins for {chat_id}\n- {admin_list}",
-                )
-
-            end = time()
-            LOGGER.info(
-                (
-                    "Set admin list cache!\n"
-                    f"Time Taken: {round(end - begin, 2)} seconds."
-                ),
-            )
 
     async def start(self):
         """Start the bot."""
@@ -155,16 +86,11 @@ class Alita(Client):
         lang_status = len(lang_dict) >= 1
         LOGGER.info(f"Loading Languages: {lang_status}")
 
-        # Cache admins
-        LOGGER.info(f"Loading Admins (Caching): {LOAD_ADMINS}")
-        if LOAD_ADMINS:
-            await self.get_admins()
-
         # Show in Log that bot has started
         LOGGER.info(
-            f"Pyrogram v{__version__}\n(Layer - {layer}) started on {BOT_USERNAME}\n"
-            f"Python Version: {python_version()}",
+            f"\nPyrogram v{__version__} (Layer - {layer}) started on {meh.username}",
         )
+        LOGGER.info(f"Python Version: {python_version()}\n")
 
         # Get cmds and keys
         cmd_list = await load_cmds(await all_plugins())

@@ -19,77 +19,85 @@
 from asyncio import sleep
 
 from pyrogram import filters
-from pyrogram.errors import MessageDeleteForbidden
+from pyrogram.errors import MessageDeleteForbidden, RPCError
 from pyrogram.types import Message
 
-from alita import PREFIX_HANDLER
+from alita import PREFIX_HANDLER, SUPPORT_GROUP
 from alita.bot_class import Alita
 from alita.tr_engine import tlang
 from alita.utils.custom_filters import admin_filter
 
-__PLUGIN__ = "plugins.purges.main"
-__help__ = "plugins.purges.help"
 
-
-@Alita.on_message(
-    filters.command("purge", PREFIX_HANDLER) & filters.group & admin_filter,
-)
+@Alita.on_message(filters.command("purge", PREFIX_HANDLER) & admin_filter)
 async def purge(c: Alita, m: Message):
 
     if m.chat.type != "supergroup":
         await m.reply_text(tlang(m, "purge.err_basic"))
         return
-    dm = await m.reply_text(tlang(m, "purge.deleting"))
-
-    message_ids = []
 
     if m.reply_to_message:
-        for a_msg in range(m.reply_to_message.message_id, m.message_id):
-            message_ids.append(a_msg)
+        message_ids = list(range(m.reply_to_message.message_id, m.message_id))
 
-    if (
-        not m.reply_to_message
-        and len(m.text.split()) == 2
-        and isinstance(m.text.split()[1], int)
-    ):
-        c_msg_id = m.message_id
-        first_msg = (m.message_id) - (m.text.split()[1])
-        for a_msg in range(first_msg, c_msg_id):
-            message_ids.append(a_msg)
+        def divide_chunks(l, n):
+            for i in range(0, len(l), n):
+                yield l[i : i + n]
 
-    try:
-        await c.delete_messages(chat_id=m.chat.id, message_ids=message_ids, revoke=True)
-        await m.delete()
-    except MessageDeleteForbidden:
-        await dm.edit_text(tlang(m, "purge.old_msg_err"))
+        # Dielete messages in chunks of 100 messages
+        m_list = list(divide_chunks(message_ids, 100))
+
+        try:
+            for plist in m_list:
+                await c.delete_messages(
+                    chat_id=m.chat.id,
+                    message_ids=plist,
+                    revoke=True,
+                )
+            await m.delete()
+        except MessageDeleteForbidden:
+            await m.reply_text(tlang(m, "purge.old_msg_err"))
+            return
+        except RPCError as ef:
+            await m.reply_text(
+                (tlang(m, "general.some_error")).format(
+                    SUPPORT_GROUP=SUPPORT_GROUP,
+                    ef=ef,
+                ),
+            )
+
+        count_del_msg = len(message_ids)
+
+        z = await m.reply_text(
+            (tlang(m, "purge.purge_msg_count")).format(
+                msg_count=count_del_msg,
+            ),
+        )
+        await sleep(3)
+        await z.delete()
         return
-
-    count_del_msg = len(message_ids)
-
-    await dm.edit(
-        (tlang(m, "purge.purge_msg_count")).format(
-            msg_count=count_del_msg,
-        ),
-    )
-    await sleep(3)
-    await dm.delete()
+    await m.reply_text("Reply to a message to start purge.")
     return
 
 
 @Alita.on_message(
-    filters.command("del", PREFIX_HANDLER) & filters.group & admin_filter,
-    group=4,
+    filters.command("del", PREFIX_HANDLER) & admin_filter,
+    group=9,
 )
 async def del_msg(c: Alita, m: Message):
 
+    if m.chat.type != "supergroup":
+        return
+
     if m.reply_to_message:
-        if m.chat.type != "supergroup":
-            return
+        await m.delete()
         await c.delete_messages(
             chat_id=m.chat.id,
             message_ids=m.reply_to_message.message_id,
         )
-        await m.delete()
     else:
         await m.reply_text(tlang(m, "purge.what_del"))
     return
+
+
+__PLUGIN__ = "plugins.purges.main"
+__help__ = "plugins.purges.help"
+__alt_name__ = ["purge", "del"]

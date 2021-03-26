@@ -16,17 +16,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from traceback import format_exc
-
 from pyrogram import filters
 from pyrogram.types import CallbackQuery
 
-from alita import DEV_USERS, LOGGER, OWNER_ID, SUDO_USERS
+from alita import DEV_USERS, OWNER_ID, SUDO_USERS
 from alita.tr_engine import tlang
-from alita.utils.admin_cache import admin_cache_reload
+from alita.utils.caching import ADMIN_CACHE, admin_cache_reload
 
-SUDO_LEVEL = SUDO_USERS + DEV_USERS + [int(OWNER_ID)]
-DEV_LEVEL = DEV_USERS + [int(OWNER_ID)]
+SUDO_LEVEL = set(SUDO_USERS + DEV_USERS + [int(OWNER_ID)])
+DEV_LEVEL = set(DEV_USERS + [int(OWNER_ID)])
 
 
 async def dev_check_func(_, __, m):
@@ -45,21 +43,26 @@ async def admin_check_func(_, __, m):
     if isinstance(m, CallbackQuery):
         m = m.message
 
+    if m.chat.type != "supergroup":
+        return False
+
     # Bypass the bot devs, sudos and owner
     if m.from_user.id in SUDO_LEVEL:
         return True
 
     try:
-        return await admin_cache_reload(m)
-    except ValueError as ef:  # To make language selection work in private chat of user, i.e. PM
-        if ("The chat_id" or "belongs to a user") in ef:
+        admin_group = {i[0] for i in ADMIN_CACHE[m.chat.id]}
+    except KeyError:
+        admin_group = {
+            i[0] for i in await admin_cache_reload(m, "custom_filter_update")
+        }
+    except ValueError as ef:
+        # To make language selection work in private chat of user, i.e. PM
+        if ("The chat_id" and "belongs to a user") in ef:
             return True
-        return False
-    except Exception as ef:
-        user = await m.chat.get_member(m.from_user.id)
-        if user.status in ("creator", "administrator"):
-            return True
-        LOGGER.error(format_exc())
+
+    if m.from_user.id in admin_group:
+        return True
 
     await m.reply_text(tlang(m, "general.no_admin_cmd_perm"))
 
@@ -68,8 +71,12 @@ async def admin_check_func(_, __, m):
 
 async def owner_check_func(_, __, m):
     """Check if user is Owner or not."""
+
     if isinstance(m, CallbackQuery):
         m = m.message
+
+    if m.chat.type != "supergroup":
+        return False
 
     # Bypass the bot devs, sudos and owner
     if m.from_user.id in DEV_LEVEL:
@@ -84,7 +91,7 @@ async def owner_check_func(_, __, m):
         if user.status == "administrator":
             msg = "You're an admin only, stay in your limits!"
         else:
-            msg = "Do you think that you can execute admin commands?"
+            msg = "Do you think that you can execute owner commands?"
         await m.reply_text(msg)
 
     return status
@@ -92,10 +99,12 @@ async def owner_check_func(_, __, m):
 
 async def restrict_check_func(_, __, m):
     """Check if user can restrict users or not."""
+
     if isinstance(m, CallbackQuery):
         m = m.message
 
-    await admin_cache_reload(m)
+    if m.chat.type != "supergroup":
+        return False
 
     # Bypass the bot devs, sudos and owner
     if m.from_user.id in DEV_LEVEL:
@@ -114,10 +123,12 @@ async def restrict_check_func(_, __, m):
 
 async def promote_check_func(_, __, m):
     """Check if user can promote users or not."""
+
     if isinstance(m, CallbackQuery):
         m = m.message
 
-    await admin_cache_reload(m)
+    if m.chat.type != "supergroup":
+        return False
 
     # Bypass the bot devs, sudos and owner
     if m.from_user.id in DEV_LEVEL:
@@ -136,10 +147,12 @@ async def promote_check_func(_, __, m):
 
 async def invite_check_func(_, __, m):
     """Check if user can invite users or not."""
+
     if isinstance(m, CallbackQuery):
         m = m.message
 
-    await admin_cache_reload(m)
+    if m.chat.type != "supergroup":
+        return False
 
     # Bypass the bot devs, sudos and owner
     if m.from_user.id in DEV_LEVEL:

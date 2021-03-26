@@ -16,20 +16,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from time import time
-
-from pyrogram import filters
-from pyrogram.types import Message
-
-from alita import DEV_PREFIX_HANDLER
 from alita.bot_class import Alita
-from alita.utils.custom_filters import sudo_filter
+from alita.utils.msg_types import Types
 
 
-@Alita.on_message(filters.command("test", DEV_PREFIX_HANDLER) & sudo_filter, group=15)
-async def test_bot(_, m: Message):
-    start = time()
-    replymsg = await m.reply_text("Calculating...")
-    end = round(time() - start, 2)
-    await replymsg.edit_text(f"Test complete\nTime Taken:{end} seconds")
-    return
+async def send_cmd(client: Alita, msgtype):
+    GET_FORMAT = {
+        Types.TEXT.value: client.send_message,
+        Types.DOCUMENT.value: client.send_document,
+        Types.PHOTO.value: client.send_photo,
+        Types.VIDEO.value: client.send_video,
+        Types.STICKER.value: client.send_sticker,
+        Types.AUDIO.value: client.send_audio,
+        Types.VOICE.value: client.send_voice,
+        Types.VIDEO_NOTE.value: client.send_video_note,
+        Types.ANIMATION.value: client.send_animation,
+        Types.ANIMATED_STICKER.value: client.send_sticker,
+        Types.CONTACT: client.send_contact,
+    }
+    return GET_FORMAT[msgtype]

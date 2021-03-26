@@ -30,14 +30,13 @@ from alita.utils.custom_filters import dev_filter
 # initialise database
 db = GroupBlacklist()
 
-__PLUGIN__ = "Chat Blacklist"
-
 
 @Alita.on_message(filters.command("blchat", DEV_PREFIX_HANDLER) & dev_filter)
 async def blacklist_chat(c: Alita, m: Message):
     if len(m.text.split()) >= 2:
         chat_ids = m.text.split()[1:]
         replymsg = await m.reply_text(f"Adding {len(chat_ids)} chats to blacklist")
+        LOGGER.info(f"{m.from_user.id} blacklisted {chat_ids} groups for bot")
         for chat in chat_ids:
             try:
                 get_chat = await c.get_chat(chat)
@@ -62,7 +61,8 @@ async def blacklist_chat(c: Alita, m: Message):
 async def unblacklist_chat(c: Alita, m: Message):
     if len(m.text.split()) >= 2:
         chat_ids = m.text.split()[1:]
-        replymsg = await m.reply_text(f"Adding {len(chat_ids)} chats to blacklist")
+        replymsg = await m.reply_text(f"Removing {len(chat_ids)} chats from blacklist")
+        LOGGER.info(f"{m.from_user.id} removed blacklisted {chat_ids} groups for bot")
         bl_chats = db.list_all_chats()
         for chat in chat_ids:
             try:
@@ -90,6 +90,7 @@ async def unblacklist_chat(c: Alita, m: Message):
 )
 async def list_blacklist_chats(_, m: Message):
     bl_chats = db.list_all_chats()
+    LOGGER.info(f"{m.from_user.id} checking group blacklists in {m.chat.id}")
     if bl_chats:
         txt = (
             "These Chats are Blacklisted:\n"

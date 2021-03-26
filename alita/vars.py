@@ -27,7 +27,7 @@ class Config:
     """Config class for variables."""
 
     LOGGER = True
-    TOKEN = load_var("TOKEN")
+    STRING_SESSION = load_var("STRING_SESSION")
     APP_ID = int(load_var("APP_ID"))
     API_HASH = load_var("API_HASH")
     OWNER_ID = int(load_var("OWNER_ID"))
@@ -45,7 +45,6 @@ class Config:
     VERSION = load_var("VERSION")
     DEV_PREFIX_HANDLER = load_var("DEV_PREFIX_HANDLER", ">").split()
     WORKERS = int(load_var("WORKERS", 16))
-    LOAD_ADMINS = load_var("LOAD_ADMINS")
 
 
 class Development:
@@ -53,11 +52,11 @@ class Development:
 
     # Fill in these vars if you want to use Traditional method of deploying
     LOGGER = True
-    TOKEN = "YOUR TOKEN"
+    STRING_SESSION = "YOUR STRING_SESSION"
     APP_ID = 12345  # Your APP_ID from Telegram
     API_HASH = "YOUR TOKEN"  # Your APP_HASH from Telegram
-    OWNER_ID = "YOUR TOKEN"
-    MESSAGE_DUMP = "YOUR TOKEN"  # Your Bot Token from BotFather in Telegram
+    OWNER_ID = 12345  # Your telegram user id
+    MESSAGE_DUMP = "YOUR GROUP_ID"  # Your Private Group ID
     DEV_USERS = []
     SUDO_USERS = []
     WHITELIST_USERS = []
@@ -67,8 +66,7 @@ class Development:
     PREFIX_HANDLER = ["!", "/"]
     SUPPORT_GROUP = "SUPPORT_GROUP"
     SUPPORT_CHANNEL = "SUPPORT_CHANNEL"
-    ENABLED_LOCALES = "ENABLED_LOCALES"
+    ENABLED_LOCALES = ["ENABLED_LOCALES"]
     VERSION = "VERSION"
-    DEV_PREFIX_HANDLER = ">"
+    DEV_PREFIX_HANDLER = "?"
     WORKERS = 8
-    LOAD_ADMINS = True

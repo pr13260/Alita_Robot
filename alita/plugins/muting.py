@@ -17,33 +17,57 @@
 
 
 from pyrogram import filters
-from pyrogram.errors import ChatAdminRequired, RightForbidden, RPCError
+from pyrogram.errors import (
+    ChatAdminRequired,
+    RightForbidden,
+    RPCError,
+    UserNotParticipant,
+)
 from pyrogram.types import ChatPermissions, Message
 
 from alita import LOGGER, PREFIX_HANDLER, SUPPORT_GROUP, SUPPORT_STAFF
 from alita.bot_class import Alita
 from alita.tr_engine import tlang
-from alita.utils.admin_cache import ADMIN_CACHE
+from alita.utils.caching import ADMIN_CACHE, admin_cache_reload
 from alita.utils.custom_filters import restrict_filter
 from alita.utils.extract_user import extract_user
 from alita.utils.parser import mention_html
 
-__PLUGIN__ = "plugins.muting.main"
-__help__ = "plugins.muting.help"
 
-
-@Alita.on_message(
-    filters.command("mute", PREFIX_HANDLER) & filters.group & restrict_filter,
-)
+@Alita.on_message(filters.command("mute", PREFIX_HANDLER) & restrict_filter)
 async def mute_usr(c: Alita, m: Message):
+    from alita import BOT_ID
 
-    user_id, user_first_name = await extract_user(c, m)
+    if len(m.text.split()) == 1 and not m.reply_to_message:
+        await m.reply_text("I can't mute nothing!")
+        return
+
+    if m.reply_to_message and len(m.text.split()) >= 2:
+        reason = m.text.split(None, 1)[1]
+    elif not m.reply_to_message and len(m.text.split()) >= 3:
+        reason = m.text.split(None, 2)[2]
+    else:
+        reason = None
+
+    user_id, user_first_name, _ = await extract_user(c, m)
+
+    if user_id == BOT_ID:
+        await m.reply_text("Huh, why would I mute myself?")
+        return
 
     if user_id in SUPPORT_STAFF:
+        LOGGER.info(
+            f"{m.from_user.id} trying to mute {user_id} (SUPPORT_STAFF) in {m.chat.id}",
+        )
         await m.reply_text(tlang(m, "admin.support_cannot_restrict"))
         return
 
-    if user_id in [i[0] for i in ADMIN_CACHE[m.chat.id]]:
+    try:
+        admins_group = {i[0] for i in ADMIN_CACHE[m.chat.id]}
+    except KeyError:
+        admins_group = await admin_cache_reload(m, "mute")
+
+    if user_id in admins_group:
         await m.reply_text(tlang(m, "admin.mute.admin_cannot_mute"))
         return
 
@@ -64,16 +88,20 @@ async def mute_usr(c: Alita, m: Message):
                 can_pin_messages=False,
             ),
         )
-        await m.reply_text(
-            (tlang(m, "admin.mute.muted_user")).format(
-                admin=(await mention_html(m.from_user.first_name, m.from_user.id)),
-                muted=(await mention_html(user_first_name, user_id)),
-            ),
+        LOGGER.info(f"{m.from_user.id} muted {user_id} in {m.chat.id}")
+        txt = (tlang(m, "admin.mute.muted_user")).format(
+            admin=(await mention_html(m.from_user.first_name, m.from_user.id)),
+            muted=(await mention_html(user_first_name, user_id)),
         )
+        if reason:
+            txt += f"\n<b>Reason</b>: {reason}"
+        await m.reply_text(txt)
     except ChatAdminRequired:
         await m.reply_text(tlang(m, "admin.not_admin"))
     except RightForbidden:
         await m.reply_text(tlang(m, "admin.mute.bot_no_right"))
+    except UserNotParticipant:
+        await m.reply_text("How can I mute a user who is not a part of this chat?")
     except RPCError as ef:
         await m.reply_text(
             (tlang(m, "general.some_error")).format(
@@ -86,15 +114,23 @@ async def mute_usr(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(
-    filters.command("unmute", PREFIX_HANDLER) & filters.group & restrict_filter,
-)
+@Alita.on_message(filters.command("unmute", PREFIX_HANDLER) & restrict_filter)
 async def unmute_usr(c: Alita, m: Message):
+    from alita import BOT_ID
 
-    user_id, user_first_name = await extract_user(c, m)
+    if len(m.text.split()) == 1 and not m.reply_to_message:
+        await m.reply_text("I can't unmute nothing!")
+        return
+
+    user_id, user_first_name, _ = await extract_user(c, m)
+
+    if user_id == BOT_ID:
+        await m.reply_text("Huh, why would I unmute myself if you are using me?")
+        return
 
     try:
         await m.chat.restrict_member(user_id, m.chat.permissions)
+        LOGGER.info(f"{m.from_user.id} unmuted {user_id} in {m.chat.id}")
         await m.reply_text(
             (tlang(m, "admin.unmute.unmuted_user")).format(
                 admin=(await mention_html(m.from_user.first_name, m.from_user.id)),
@@ -103,6 +139,8 @@ async def unmute_usr(c: Alita, m: Message):
         )
     except ChatAdminRequired:
         await m.reply_text(tlang(m, "admin.not_admin"))
+    except UserNotParticipant:
+        await m.reply_text("How can I unmute a user who is not a part of this chat?")
     except RightForbidden:
         await m.reply_text(tlang(m, "admin.unmute.bot_no_right"))
     except RPCError as ef:
@@ -114,3 +152,8 @@ async def unmute_usr(c: Alita, m: Message):
         )
         LOGGER.error(ef)
     return
+
+
+__PLUGIN__ = "plugins.muting.main"
+__help__ = "plugins.muting.help"
+__alt_name__ = ["mute", "unmute"]
