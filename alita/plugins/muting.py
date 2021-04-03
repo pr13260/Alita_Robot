@@ -33,7 +33,7 @@ from alita.utils.extract_user import extract_user
 from alita.utils.parser import mention_html
 
 
-@Alita.on_message(command("mute") & restrict_filter)
+@Alita.on_message(command("mute", private=False) & restrict_filter)
 async def mute_usr(c: Alita, m: Message):
     from alita import BOT_ID
 
@@ -122,7 +122,7 @@ async def mute_usr(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(command("unmute") & restrict_filter)
+@Alita.on_message(command("unmute", private=False) & restrict_filter)
 async def unmute_usr(c: Alita, m: Message):
     from alita import BOT_ID
 

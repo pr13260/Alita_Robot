@@ -29,7 +29,6 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import PREFIX_HANDLER
 from alita.bot_class import LOGGER, Alita
 from alita.database.filters_db import Filters
 from alita.utils.cmd_senders import send_cmd
@@ -47,7 +46,7 @@ from alita.utils.string import (
 db = Filters()
 
 
-@Alita.on_message(command("filters") & filters.group)
+@Alita.on_message(command("filters", private=False))
 async def view_filters(_, m: Message):
 
     LOGGER.info(f"{m.from_user.id} checking filters in {m.chat.id}")
@@ -70,9 +69,7 @@ async def view_filters(_, m: Message):
     return
 
 
-@Alita.on_message(
-    command(["addfilter", "filter"]) & admin_filter,
-)
+@Alita.on_message(command(["addfilter", "filter"], private=False) & admin_filter)
 async def add_filter(_, m: Message):
 
     args = m.text.split(None, 1)
@@ -158,7 +155,7 @@ async def add_filter(_, m: Message):
 
 
 @Alita.on_message(
-    command(["rmfilter", "stop", "unfilter"]) & admin_filter,
+    command(["rmfilter", "stop", "unfilter"], private=False) & admin_filter,
 )
 async def stop_filter(_, m: Message):
     args = m.command
@@ -192,7 +189,7 @@ async def stop_filter(_, m: Message):
 @Alita.on_message(
     command(
         ["rmallfilters", "removeallfilters", "stopall", "stopallfilters"],
-        PREFIX_HANDLER,
+        private=False,
     )
     & owner_filter,
 )

@@ -88,7 +88,7 @@ async def wiki(_, m: Message):
     return
 
 
-@Alita.on_message(command("gdpr"))
+@Alita.on_message(command("gdpr", group=False))
 async def gdpr_remove(_, m: Message):
 
     if m.from_user.id in SUPPORT_STAFF:
@@ -110,9 +110,7 @@ async def gdpr_remove(_, m: Message):
     await m.stop_propagation()
 
 
-@Alita.on_message(
-    command("lyrics") & (filters.group | filters.private),
-)
+@Alita.on_message(command("lyrics"))
 async def get_lyrics(_, m: Message):
     LOGGER.info(f"{m.from_user.id} used lyrics cmd in {m.chat.id}")
     query = m.text.split(None, 1)[1]
@@ -143,9 +141,7 @@ async def get_lyrics(_, m: Message):
     return
 
 
-@Alita.on_message(
-    command("id") & (filters.group | filters.private),
-)
+@Alita.on_message(command("id"))
 async def id_info(c: Alita, m: Message):
     LOGGER.info(f"{m.from_user.id} used id cmd in {m.chat.id}")
 
@@ -198,9 +194,7 @@ async def id_info(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(
-    command("gifid") & (filters.group | filters.private),
-)
+@Alita.on_message(command("gifid"))
 async def get_gifid(_, m: Message):
     if m.reply_to_message and m.reply_to_message.animation:
         LOGGER.info(f"{m.from_user.id} used gifid cmd in {m.chat.id}")
@@ -213,9 +207,7 @@ async def get_gifid(_, m: Message):
     return
 
 
-@Alita.on_message(
-    command("github") & (filters.group | filters.private),
-)
+@Alita.on_message(command("github"))
 async def github(_, m: Message):
     if len(m.text.split()) == 2:
         username = m.text.split(None, 1)[1]
@@ -252,9 +244,7 @@ async def github(_, m: Message):
     return
 
 
-@Alita.on_message(
-    command("info") & (filters.group | filters.private),
-)
+@Alita.on_message(command("info"))
 async def my_info(c: Alita, m: Message):
     try:
         user_id, name, user_name = await extract_user(c, m)

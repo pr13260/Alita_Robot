@@ -46,7 +46,7 @@ db = Notes()
 db_settings = NotesSettings()
 
 
-@Alita.on_message(command("save") & admin_filter)
+@Alita.on_message(command("save", private=False) & admin_filter)
 async def save_note(_, m: Message):
 
     existing_notes = [i[0] for i in db.get_all_notes(m.chat.id)]
@@ -86,7 +86,7 @@ async def save_note(_, m: Message):
     return
 
 
-async def get_note_func(c: Alita, m: Message, note_name, priv_notes_status):
+async def get_note_func(c: Alita, m: Message, note_name: str, priv_notes_status: bool):
     """Get the note in normal mode, with parsing enabled."""
 
     reply_text = m.reply_to_message.reply_text if m.reply_to_message else m.reply_text
@@ -285,7 +285,7 @@ async def hash_get(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(command("get") & filters.group)
+@Alita.on_message(command("get", private=False))
 async def get_note(c: Alita, m: Message):
     if len(m.text.split()) == 2:
         priv_notes_status = db_settings.get_privatenotes(m.chat.id)
@@ -307,9 +307,7 @@ async def get_note(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(
-    command(["privnotes", "privatenotes"]) & admin_filter,
-)
+@Alita.on_message(command(["privnotes", "privatenotes"], private=False) & admin_filter)
 async def priv_notes(_, m: Message):
 
     chat_id = m.chat.id
@@ -337,7 +335,7 @@ async def priv_notes(_, m: Message):
     return
 
 
-@Alita.on_message(command(["notes", "saved"]) & filters.group)
+@Alita.on_message(command(["notes", "saved"], private=False))
 async def local_notes(_, m: Message):
     LOGGER.info(f"{m.from_user.id} listed all notes in {m.chat.id}")
     getnotes = db.get_all_notes(m.chat.id)
@@ -376,7 +374,7 @@ async def local_notes(_, m: Message):
     return
 
 
-@Alita.on_message(command("clear") & admin_filter)
+@Alita.on_message(command("clear", private=False) & admin_filter)
 async def clear_note(_, m: Message):
 
     if len(m.text.split()) <= 1:
@@ -394,7 +392,7 @@ async def clear_note(_, m: Message):
     return
 
 
-@Alita.on_message(command("clearall") & owner_filter)
+@Alita.on_message(command("clearall", private=False) & owner_filter)
 async def clear_allnote(_, m: Message):
 
     all_notes = [i[0] for i in db.get_all_notes(m.chat.id)]

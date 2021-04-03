@@ -34,7 +34,7 @@ from alita.utils.custom_filters import command, owner_filter, restrict_filter
 from alita.utils.parser import mention_html
 
 
-@Alita.on_message(command("blacklist") & filters.group)
+@Alita.on_message(command("blacklist", private=False))
 async def view_blacklist(_, m: Message):
 
     db = Blacklist(m.chat.id)
@@ -63,7 +63,7 @@ async def view_blacklist(_, m: Message):
     return
 
 
-@Alita.on_message(command("addblacklist") & restrict_filter)
+@Alita.on_message(command("addblacklist", private=False) & restrict_filter)
 async def add_blacklist(_, m: Message):
 
     db = Blacklist(m.chat.id)
@@ -100,7 +100,8 @@ async def add_blacklist(_, m: Message):
 
 
 @Alita.on_message(
-    command(["blwarning", "blreason", "blacklistreason"]) & restrict_filter,
+    command(["blwarning", "blreason", "blacklistreason"], private=False)
+    & restrict_filter,
 )
 async def blacklistreason(_, m: Message):
 
@@ -121,7 +122,7 @@ async def blacklistreason(_, m: Message):
 
 
 @Alita.on_message(
-    command(["rmblacklist", "unblacklist"]) & restrict_filter,
+    command(["rmblacklist", "unblacklist"], private=False) & restrict_filter,
 )
 async def rm_blacklist(_, m: Message):
 
@@ -164,7 +165,8 @@ async def rm_blacklist(_, m: Message):
 
 
 @Alita.on_message(
-    command(["blaction", "blacklistaction", "blacklistmode"]) & restrict_filter,
+    command(["blaction", "blacklistaction", "blacklistmode"], private=False)
+    & restrict_filter,
 )
 async def set_bl_action(_, m: Message):
 
@@ -198,9 +200,7 @@ async def set_bl_action(_, m: Message):
     return
 
 
-@Alita.on_message(
-    command("rmallblacklist") & owner_filter,
-)
+@Alita.on_message(command("rmallblacklist", private=False) & owner_filter)
 async def rm_allblacklist(_, m: Message):
 
     db = Blacklist(m.chat.id)

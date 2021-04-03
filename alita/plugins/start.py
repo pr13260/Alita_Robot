@@ -38,18 +38,14 @@ from alita.utils.start_utils import (
 )
 
 
-@Alita.on_message(
-    command("donate") & (filters.group | filters.private),
-)
+@Alita.on_message(command("donate"))
 async def donate(_, m: Message):
     LOGGER.info(f"{m.from_user.id} fetched donation text in {m.chat.id}")
     await m.reply_text(tlang(m, "general.donate_owner"))
     return
 
 
-@Alita.on_message(
-    command("start") & (filters.group | filters.private),
-)
+@Alita.on_message(command("start"))
 async def start(c: Alita, m: Message):
 
     if m.chat.type == "private":

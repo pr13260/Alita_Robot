@@ -36,10 +36,21 @@ def command(
     commands: str or List[str],
     prefixes: str or List[str] = PREFIX_HANDLER,
     case_sensitive: bool = False,
+    group: bool = True,
+    private: bool = True,
 ):
     from alita import BOT_USERNAME
 
     async def func(flt, _, m: Message):
+
+        if private and m.chat.type not in ("private"):
+            await m.reply_text("This command is meant to be used in a group!")
+            return False
+        elif group and m.chat.type not in ("group", "supergroup"):
+            await m.reply_text("This command is meant to be used in private!")
+            return False
+        else:
+            pass
 
         if not m.from_user:
             return False

@@ -34,9 +34,7 @@ from alita.utils.extract_user import extract_user
 from alita.utils.parser import mention_html
 
 
-@Alita.on_message(
-    command("approve") & admin_filter,
-)
+@Alita.on_message(command("approve", private=False) & admin_filter)
 async def approve_user(c: Alita, m: Message):
 
     db = Approve(m.chat.id)
@@ -100,9 +98,7 @@ async def approve_user(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(
-    command(["disapprove", "unapprove"]) & admin_filter,
-)
+@Alita.on_message(command(["disapprove", "unapprove"], private=False) & admin_filter)
 async def disapprove_user(c: Alita, m: Message):
 
     db = Approve(m.chat.id)
@@ -154,7 +150,7 @@ async def disapprove_user(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(command("approved") & admin_filter)
+@Alita.on_message(command("approved", private=False) & admin_filter)
 async def check_approved(_, m: Message):
 
     db = Approve(m.chat.id)
@@ -182,7 +178,7 @@ async def check_approved(_, m: Message):
     return
 
 
-@Alita.on_message(command("approval") & filters.group)
+@Alita.on_message(command("approval", private=False))
 async def check_approval(c: Alita, m: Message):
 
     db = Approve(m.chat.id)
@@ -207,9 +203,7 @@ async def check_approval(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(
-    command("unapproveall") & filters.group & owner_filter,
-)
+@Alita.on_message(command("unapproveall", private=False) & owner_filter)
 async def unapproveall_users(_, m: Message):
 
     db = Approve(m.chat.id)

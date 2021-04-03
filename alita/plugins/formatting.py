@@ -57,9 +57,7 @@ async def gen_formatting_kb(m):
     return keyboard
 
 
-@Alita.on_message(
-    command(["markdownhelp", "formatting"]) & filters.private,
-)
+@Alita.on_message(command(["markdownhelp", "formatting"], group=False))
 async def markdownhelp(_, m: Message):
     await m.reply_text(
         tlang(m, __help__),

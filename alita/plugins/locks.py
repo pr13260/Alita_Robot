@@ -28,7 +28,7 @@ from alita.tr_engine import tlang
 from alita.utils.custom_filters import admin_filter, command, restrict_filter
 
 
-@Alita.on_message(command("locktypes") & admin_filter)
+@Alita.on_message(command("locktypes", private=False) & admin_filter)
 async def lock_types(_, m: Message):
     await m.reply_text(
         (
@@ -50,7 +50,7 @@ async def lock_types(_, m: Message):
     return
 
 
-@Alita.on_message(command("lock") & restrict_filter)
+@Alita.on_message(command("lock", private=False) & restrict_filter)
 async def lock_perm(c: Alita, m: Message):
 
     msg = ""
@@ -175,7 +175,7 @@ async def lock_perm(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(command("locks") & restrict_filter)
+@Alita.on_message(command("locks", private=False) & restrict_filter)
 async def view_locks(_, m: Message):
 
     (
@@ -238,7 +238,7 @@ async def view_locks(_, m: Message):
     return
 
 
-@Alita.on_message(command("unlock") & restrict_filter)
+@Alita.on_message(command("unlock", private=False) & restrict_filter)
 async def unlock_perm(c: Alita, m: Message):
 
     (

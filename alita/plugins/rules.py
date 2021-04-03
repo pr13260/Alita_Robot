@@ -31,7 +31,7 @@ from alita.tr_engine import tlang
 from alita.utils.custom_filters import admin_filter, command
 
 
-@Alita.on_message(command("rules") & filters.group)
+@Alita.on_message(command("rules", private=False))
 async def get_rules(_, m: Message):
 
     db = Rules(m.chat.id)
@@ -78,7 +78,7 @@ async def get_rules(_, m: Message):
     return
 
 
-@Alita.on_message(command("setrules") & admin_filter)
+@Alita.on_message(command("setrules", private=False) & admin_filter)
 async def set_rules(_, m: Message):
 
     db = Rules(m.chat.id)
@@ -98,7 +98,7 @@ async def set_rules(_, m: Message):
 
 
 @Alita.on_message(
-    command(["privrules", "privaterules"]) & admin_filter,
+    command(["privrules", "privaterules"], private=False) & admin_filter,
 )
 async def priv_rules(_, m: Message):
 
@@ -129,7 +129,7 @@ async def priv_rules(_, m: Message):
     return
 
 
-@Alita.on_message(command("clearrules") & admin_filter)
+@Alita.on_message(command("clearrules", private=False) & admin_filter)
 async def clear_rules(_, m: Message):
 
     db = Rules(m.chat.id)

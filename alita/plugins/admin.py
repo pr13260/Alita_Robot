@@ -153,9 +153,7 @@ async def tag_admins(_, m: Message):
     )
 
 
-@Alita.on_message(
-    command("promote") & promote_filter,
-)
+@Alita.on_message(command("promote", private=False) & promote_filter)
 async def promote_usr(c: Alita, m: Message):
     from alita import BOT_ID
 
@@ -242,9 +240,7 @@ async def promote_usr(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(
-    command("demote") & promote_filter,
-)
+@Alita.on_message(command("demote", private=False) & promote_filter)
 async def demote_usr(c: Alita, m: Message):
     from alita import BOT_ID
 
@@ -322,9 +318,7 @@ async def demote_usr(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(
-    command("invitelink"),
-)
+@Alita.on_message(command("invitelink", private=False) & admin_filter)
 async def get_invitelink(c: Alita, m: Message):
 
     # Bypass the bot devs, sudos and owner

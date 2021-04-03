@@ -32,7 +32,7 @@ from alita.tr_engine import tlang
 from alita.utils.custom_filters import admin_filter, command
 
 
-@Alita.on_message(command("pin") & admin_filter)
+@Alita.on_message(command("pin", private=False) & admin_filter)
 async def pin_message(_, m: Message):
 
     pin_args = m.text.split(None, 1)
@@ -76,7 +76,7 @@ async def pin_message(_, m: Message):
     return
 
 
-@Alita.on_message(command("unpin") & admin_filter)
+@Alita.on_message(command("unpin", private=False) & admin_filter)
 async def unpin_message(c: Alita, m: Message):
 
     try:
@@ -104,7 +104,7 @@ async def unpin_message(c: Alita, m: Message):
     return
 
 
-@Alita.on_message(command("unpinall") & admin_filter)
+@Alita.on_message(command("unpinall", private=False) & admin_filter)
 async def unpinall_message(_, m: Message):
 
     await m.reply_text(
@@ -142,7 +142,7 @@ async def unpinall_calllback(c: Alita, q: CallbackQuery):
     return
 
 
-@Alita.on_message(command("antichannelpin") & admin_filter)
+@Alita.on_message(command("antichannelpin", private=False) & admin_filter)
 async def anti_channel_pin(_, m: Message):
 
     pinsdb = Pins(m.chat.id)
@@ -173,7 +173,7 @@ async def anti_channel_pin(_, m: Message):
     return
 
 
-@Alita.on_message(command("cleanlinked") & admin_filter)
+@Alita.on_message(command("cleanlinked", private=False) & admin_filter)
 async def clean_linked(_, m: Message):
 
     pinsdb = Pins(m.chat.id)
@@ -204,7 +204,7 @@ async def clean_linked(_, m: Message):
     return
 
 
-@Alita.on_message(command("permapin") & admin_filter)
+@Alita.on_message(command("permapin", private=False) & admin_filter)
 async def perma_pin(_, m: Message):
     if m.reply_to_message:
         LOGGER.info(f"{m.from_user.id} used permampin in {m.chat.id}")

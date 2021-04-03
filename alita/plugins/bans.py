@@ -37,9 +37,7 @@ from alita.utils.extract_user import extract_user
 from alita.utils.parser import mention_html
 
 
-@Alita.on_message(
-    command(["kick", "skick", "dkick"]) & restrict_filter,
-)
+@Alita.on_message(command(["kick", "skick", "dkick"], private=False) & restrict_filter)
 async def kick_usr(c: Alita, m: Message):
     from alita import BOT_ID
 
@@ -128,9 +126,7 @@ async def kick_usr(c: Alita, m: Message):
     await m.stop_propagation()
 
 
-@Alita.on_message(
-    command(["ban", "sban", "dban"]) & restrict_filter,
-)
+@Alita.on_message(command(["ban", "sban", "dban"], private=False) & restrict_filter)
 async def ban_usr(c: Alita, m: Message):
     from alita import BOT_ID
 
@@ -213,7 +209,7 @@ async def ban_usr(c: Alita, m: Message):
     await m.stop_propagation()
 
 
-@Alita.on_message(command("unban") & restrict_filter)
+@Alita.on_message(command("unban", private=False) & restrict_filter)
 async def unban_usr(c: Alita, m: Message):
 
     if len(m.text.split()) == 1 and not m.reply_to_message:
