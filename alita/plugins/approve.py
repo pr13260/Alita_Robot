@@ -26,7 +26,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import LOGGER, SUPPORT_GROUP
+from alita import LOGGER, SUPPORT_GROUP, eor
 from alita.bot_class import Alita
 from alita.database.approve_db import Approve
 from alita.utils.custom_filters import admin_filter, command, owner_filter
@@ -44,29 +44,33 @@ async def approve_user(c: Alita, m: Message):
     chat_title = m.chat.title
     user_id, user_first_name, _ = await extract_user(c, m)
     if not user_id:
-        await m.reply_text(
+        await eor(
+            m,
             "I don't know who you're talking about, you're going to need to specify a user!",
         )
         return
     try:
         member = await m.chat.get_member(user_id)
     except UserNotParticipant:
-        await m.reply_text("This user is not in this chat!")
+        await eor(m, text="This user is not in this chat!")
         return
 
     except RPCError as ef:
-        await m.reply_text(
+        await eor(
+            m,
             f"<b>Error</b>: <code>{ef}</code>\nReport it to @{SUPPORT_GROUP}",
         )
         return
     if member.status in ("administrator", "creator"):
-        await m.reply_text(
+        await eor(
+            m,
             "User is already admin - blacklists and locks already don't apply to them.",
         )
         return
     already_approved = db.check_approve(user_id)
     if already_approved:
-        await m.reply_text(
+        await eor(
+            m,
             f"{(await mention_html(user_first_name, user_id))} is already approved in {chat_title}",
         )
         return
@@ -91,7 +95,8 @@ async def approve_user(c: Alita, m: Message):
         ),
     )
 
-    await m.reply_text(
+    await eor(
+        m,
         (
             f"{(await mention_html(user_first_name, user_id))} has been approved in {chat_title}!\n"
             "They will now be ignored by blacklists, locks and antiflood!"
@@ -111,7 +116,8 @@ async def disapprove_user(c: Alita, m: Message):
     user_id, user_first_name, _ = await extract_user(c, m)
     already_approved = db.check_approve(user_id)
     if not user_id:
-        await m.reply_text(
+        await eor(
+            m,
             "I don't know who you're talking about, you're going to need to specify a user!",
         )
         return
@@ -121,20 +127,22 @@ async def disapprove_user(c: Alita, m: Message):
         if already_approved:  # If user is approved and not in chat, unapprove them.
             db.remove_approve(user_id)
             LOGGER.info(f"{user_id} disapproved in {m.chat.id} as UserNotParticipant")
-        await m.reply_text("This user is not in this chat, unapproved them.")
+        await eor(m, text="This user is not in this chat, unapproved them.")
         return
     except RPCError as ef:
-        await m.reply_text(
+        await eor(
+            m,
             f"<b>Error</b>: <code>{ef}</code>\nReport it to @{SUPPORT_GROUP}",
         )
         return
 
     if member.status in ("administrator", "creator"):
-        await m.reply_text("This user is an admin, they can't be disapproved.")
+        await eor(m, text="This user is an admin, they can't be disapproved.")
         return
 
     if not already_approved:
-        await m.reply_text(
+        await eor(
+            m,
             f"{(await mention_html(user_first_name, user_id))} isn't approved yet!",
         )
         return
@@ -148,7 +156,8 @@ async def disapprove_user(c: Alita, m: Message):
         permissions=m.chat.permissions,
     )
 
-    await m.reply_text(
+    await eor(
+        m,
         f"{(await mention_html(user_first_name, user_id))} is no longer approved in {chat_title}.",
     )
     return
@@ -165,7 +174,7 @@ async def check_approved(_, m: Message):
     approved_people = db.list_approved()
 
     if not approved_people:
-        await m.reply_text(f"No users are approved in {chat_title}.")
+        await eor(m, text=f"No users are approved in {chat_title}.")
         return
 
     for user_id, user_name in approved_people.items():
@@ -177,7 +186,7 @@ async def check_approved(_, m: Message):
         except PeerIdInvalid:
             pass
         msg += f"- `{user_id}`: {user_name}\n"
-    await m.reply_text(msg)
+    await eor(m, text=msg)
     LOGGER.info(f"{m.from_user.id} checking approved users in {m.chat.id}")
     return
 
@@ -192,16 +201,19 @@ async def check_approval(c: Alita, m: Message):
     LOGGER.info(f"{m.from_user.id} checking approval of {user_id} in {m.chat.id}")
 
     if not user_id:
-        await m.reply_text(
+        await eor(
+            m,
             "I don't know who you're talking about, you're going to need to specify a user!",
         )
         return
     if check_approve:
-        await m.reply_text(
+        await eor(
+            m,
             f"{(await mention_html(user_first_name, user_id))} is an approved user. Locks, antiflood, and blacklists won't apply to them.",
         )
     else:
-        await m.reply_text(
+        await eor(
+            m,
             f"{(await mention_html(user_first_name, user_id))} is not an approved user. They are affected by normal commands.",
         )
     return
@@ -216,10 +228,11 @@ async def unapproveall_users(_, m: Message):
 
     all_approved = db.list_approved()
     if not all_approved:
-        await m.reply_text("No one is approved in this chat.")
+        await eor(m, text="No one is approved in this chat.")
         return
 
-    await m.reply_text(
+    await eor(
+        m,
         "Are you sure you want to remove everyone who is approved in this chat?",
         reply_markup=InlineKeyboardMarkup(
             [
@@ -246,7 +259,8 @@ async def unapproveall_callback(_, q: CallbackQuery):
     approved_people = db.list_approved()
     user_status = (await q.message.chat.get_member(user_id)).status
     if user_status != "creator":
-        await q.message.edit(
+        await eor(
+            q,
             (
                 f"You're an admin {await mention_html(name, user_id)}, not owner!\n"
                 "Stay in your limits!"

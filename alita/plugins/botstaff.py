@@ -19,7 +19,7 @@
 from pyrogram.errors import RPCError
 from pyrogram.types import Message
 
-from alita import DEV_USERS, LOGGER, OWNER_ID, SUDO_USERS, WHITELIST_USERS
+from alita import DEV_USERS, LOGGER, OWNER_ID, SUDO_USERS, WHITELIST_USERS, eor
 from alita.bot_class import Alita
 from alita.utils.custom_filters import dev_command
 from alita.utils.parser import mention_html
@@ -67,6 +67,6 @@ async def botstaff(c: Alita, m: Message):
                 reply += f"• {(await mention_html(user.first_name, user_id))} (<code>{user_id}</code>)\n"
             except RPCError:
                 pass
-    await m.reply_text(reply)
+    await eor(m, text=reply)
     LOGGER.info(f"{m.from_user.id} fetched botstaff in {m.chat.id}")
     return

@@ -26,7 +26,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import LOGGER
+from alita import LOGGER, eor
 from alita.bot_class import Alita
 from alita.database.blacklist_db import Blacklist
 from alita.tr_engine import tlang
@@ -48,7 +48,8 @@ async def view_blacklist(_, m: Message):
     all_blacklisted = db.get_blacklists()
 
     if not all_blacklisted:
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "blacklist.no_blacklist")).format(
                 chat_title=chat_title,
             ),
@@ -59,7 +60,7 @@ async def view_blacklist(_, m: Message):
         [f" • <code>{escape(i)}</code>" for i in all_blacklisted],
     )
 
-    await m.reply_text(blacklists_chat)
+    await eor(m, text=blacklists_chat)
     return
 
 
@@ -69,7 +70,7 @@ async def add_blacklist(_, m: Message):
     db = Blacklist(m.chat.id)
 
     if not len(m.text.split()) >= 2:
-        await m.reply_text(tlang(m, "general.check_help"))
+        await eor(m, text=tlang(m, "general.check_help"))
         return
 
     bl_words = ((m.text.split(None, 1)[1]).lower()).split()
@@ -88,7 +89,8 @@ async def add_blacklist(_, m: Message):
             + " already added in blacklist, skipped them!"
         )
     LOGGER.info(f"{m.from_user.id} added new blacklists ({bl_words}) in {m.chat.id}")
-    await m.reply_text(
+    await eor(
+        m,
         (
             (tlang(m, "blacklist.added_blacklist")).format(
                 trigger=", ".join([f"<code>{i}</code>" for i in bl_words]),
@@ -108,13 +110,15 @@ async def blacklistreason(_, m: Message):
 
     if len(m.text.split()) == 1:
         curr = db.get_reason()
-        await m.reply_text(
+        await eor(
+            m,
             f"The current reason for blacklists warn is:\n<code>{curr}</code>",
         )
     else:
         reason = m.text.split(None, 1)[1]
         db.set_reason(reason)
-        await m.reply_text(
+        await eor(
+            m,
             f"Updated reason for blacklists warn is:\n<code>{reason}</code>",
         )
     return
@@ -128,7 +132,7 @@ async def rm_blacklist(_, m: Message):
     db = Blacklist(m.chat.id)
 
     if not len(m.text.split()) >= 2:
-        await m.reply_text(tlang(m, "general.check_help"))
+        await eor(m, text=tlang(m, "general.check_help"))
         return
 
     chat_bl = db.get_blacklists()
@@ -142,7 +146,7 @@ async def rm_blacklist(_, m: Message):
         db.remove_blacklist(bl_word)
 
     if non_found_words == bl_words:
-        return await m.reply_text("Blacklists not found!")
+        return await eor(m, text="Blacklists not found!")
 
     if non_found_words:
         rep_text = (
@@ -152,7 +156,8 @@ async def rm_blacklist(_, m: Message):
         )
 
     LOGGER.info(f"{m.from_user.id} removed blacklists ({bl_words}) in {m.chat.id}")
-    await m.reply_text(
+    await eor(
+        m,
         (
             (tlang(m, "blacklist.rm_blacklist")).format(
                 bl_words=", ".join([f"<code>{i}</code>" for i in bl_words]),
@@ -174,7 +179,8 @@ async def set_bl_action(_, m: Message):
         action = m.text.split(None, 1)[1]
         valid_actions = ("ban", "kick", "mute", "warn", "none")
         if action not in valid_actions:
-            await m.reply_text(
+            await eor(
+                m,
                 "Choose a valid blacklist action from "
                 + ", ".join([f"<code>{i}</code>" for i in valid_actions]),
             )
@@ -183,17 +189,19 @@ async def set_bl_action(_, m: Message):
         LOGGER.info(
             f"{m.from_user.id} set blacklist action to '{action}' in {m.chat.id}",
         )
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "blacklist.action_set")).format(action=action),
         )
     elif len(m.text.split()) == 1:
         action = db.get_action()
         LOGGER.info(f"{m.from_user.id} checking blacklist action in {m.chat.id}")
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "blacklist.action_get")).format(action=action),
         )
     else:
-        await m.reply_text(tlang(m, "general.check_help"))
+        await eor(m, text=tlang(m, "general.check_help"))
 
     return
 
@@ -207,10 +215,11 @@ async def rm_allblacklist(_, m: Message):
 
     all_bls = db.get_blacklists()
     if not all_bls:
-        await m.reply_text("No notes are blacklists in this chat")
+        await eor(m, text="No notes are blacklists in this chat")
         return
 
-    await m.reply_text(
+    await eor(
+        m,
         "Are you sure you want to clear all blacklists?",
         reply_markup=InlineKeyboardMarkup(
             [
@@ -236,7 +245,8 @@ async def rm_allbl_callback(_, q: CallbackQuery):
 
     user_status = (await q.message.chat.get_member(user_id)).status
     if user_status != "creator":
-        await q.message.edit(
+        await eor(
+            q,
             (
                 f"You're an admin {await mention_html(name, user_id)}, not owner!\n"
                 "Stay in your limits!"

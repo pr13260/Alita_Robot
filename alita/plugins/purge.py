@@ -21,7 +21,7 @@ from asyncio import sleep
 from pyrogram.errors import MessageDeleteForbidden, RPCError
 from pyrogram.types import Message
 
-from alita import SUPPORT_GROUP
+from alita import SUPPORT_GROUP, eor
 from alita.bot_class import Alita
 from alita.tr_engine import tlang
 from alita.utils.custom_filters import admin_filter, command
@@ -31,7 +31,7 @@ from alita.utils.custom_filters import admin_filter, command
 async def purge(c: Alita, m: Message):
 
     if m.chat.type != "supergroup":
-        await m.reply_text(tlang(m, "purge.err_basic"))
+        await eor(m, text=tlang(m, "purge.err_basic"))
         return
 
     if m.reply_to_message:
@@ -53,10 +53,11 @@ async def purge(c: Alita, m: Message):
                 )
             await m.delete()
         except MessageDeleteForbidden:
-            await m.reply_text(tlang(m, "purge.old_msg_err"))
+            await eor(m, text=tlang(m, "purge.old_msg_err"))
             return
         except RPCError as ef:
-            await m.reply_text(
+            await eor(
+                m,
                 (tlang(m, "general.some_error")).format(
                     SUPPORT_GROUP=SUPPORT_GROUP,
                     ef=ef,
@@ -65,7 +66,8 @@ async def purge(c: Alita, m: Message):
 
         count_del_msg = len(message_ids)
 
-        z = await m.reply_text(
+        z = await eor(
+            m,
             (tlang(m, "purge.purge_msg_count")).format(
                 msg_count=count_del_msg,
             ),
@@ -73,7 +75,7 @@ async def purge(c: Alita, m: Message):
         await sleep(3)
         await z.delete()
         return
-    await m.reply_text("Reply to a message to start purge.")
+    await eor(m, text="Reply to a message to start purge.")
     return
 
 
@@ -93,7 +95,7 @@ async def del_msg(c: Alita, m: Message):
             message_ids=m.reply_to_message.message_id,
         )
     else:
-        await m.reply_text(tlang(m, "purge.what_del"))
+        await eor(m, text=tlang(m, "purge.what_del"))
     return
 
 

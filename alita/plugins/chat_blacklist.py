@@ -21,7 +21,7 @@ from traceback import format_exc
 from pyrogram.errors import PeerIdInvalid, RPCError
 from pyrogram.types import Message
 
-from alita import LOGGER
+from alita import LOGGER, eor
 from alita.bot_class import Alita
 from alita.database.group_blacklist import GroupBlacklist
 from alita.utils.custom_filters import dev_command
@@ -34,7 +34,7 @@ db = GroupBlacklist()
 async def blacklist_chat(c: Alita, m: Message):
     if len(m.text.split()) >= 2:
         chat_ids = m.text.split()[1:]
-        replymsg = await m.reply_text(f"Adding {len(chat_ids)} chats to blacklist")
+        replymsg = await eor(m, text=f"Adding {len(chat_ids)} chats to blacklist")
         LOGGER.info(f"{m.from_user.id} blacklisted {chat_ids} groups for bot")
         for chat in chat_ids:
             try:
@@ -42,13 +42,13 @@ async def blacklist_chat(c: Alita, m: Message):
                 chat_id = get_chat.id
                 db.add_chat(chat_id)
             except PeerIdInvalid:
-                await replymsg.edit_text(
+                await eor(
                     "Haven't seen this group in this session, maybe try again later?",
                 )
             except RPCError as ef:
                 LOGGER.error(ef)
                 LOGGER.error(format_exc())
-        await replymsg.edit_text(
+        await eor(
             f"Added the following chats to Blacklist.\n<code>{', '.join(chat_ids)}</code>.",
         )
     return
@@ -60,7 +60,7 @@ async def blacklist_chat(c: Alita, m: Message):
 async def unblacklist_chat(c: Alita, m: Message):
     if len(m.text.split()) >= 2:
         chat_ids = m.text.split()[1:]
-        replymsg = await m.reply_text(f"Removing {len(chat_ids)} chats from blacklist")
+        replymsg = await eor(m, text=f"Removing {len(chat_ids)} chats from blacklist")
         LOGGER.info(f"{m.from_user.id} removed blacklisted {chat_ids} groups for bot")
         bl_chats = db.list_all_chats()
         for chat in chat_ids:
@@ -72,13 +72,13 @@ async def unblacklist_chat(c: Alita, m: Message):
                     continue
                 db.remove_chat(chat_id)
             except PeerIdInvalid:
-                await replymsg.edit_text(
+                await eor(
                     "Haven't seen this group in this session, maybe try again later?",
                 )
             except RPCError as ef:
                 LOGGER.error(ef)
                 LOGGER.error(format_exc())
-        await replymsg.edit_text(
+        await eor(
             f"Removed the following chats to Blacklist.\n<code>{', '.join(chat_ids)}</code>.",
         )
     return
@@ -97,5 +97,5 @@ async def list_blacklist_chats(_, m: Message):
         )
     else:
         txt = "No chats are currently blacklisted!"
-    await m.reply_text(txt)
+    await eor(m, text=txt)
     return

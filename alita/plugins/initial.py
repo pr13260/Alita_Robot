@@ -20,7 +20,7 @@ from pyrogram import filters
 from pyrogram.errors import RPCError
 from pyrogram.types import Message
 
-from alita import LOGGER
+from alita import LOGGER, eor
 from alita.bot_class import Alita
 from alita.database.approve_db import Approve
 from alita.database.blacklist_db import Blacklist

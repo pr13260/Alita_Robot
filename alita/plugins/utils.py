@@ -37,6 +37,7 @@ from alita import (
     SUPPORT_GROUP,
     SUPPORT_STAFF,
     WHITELIST_USERS,
+    eor,
 )
 from alita.bot_class import Alita
 from alita.database.antispam_db import GBan
@@ -62,20 +63,21 @@ async def wiki(_, m: Message):
     try:
         res = summary(search)
     except DisambiguationError as de:
-        await m.reply_text(
+        await eor(
+            m,
             f"Disambiguated pages found! Adjust your query accordingly.\n<i>{de}</i>",
             parse_mode="html",
         )
         return
     except PageError as pe:
-        await m.reply_text(f"<code>{pe}</code>", parse_mode="html")
+        await eor(m, text=f"<code>{pe}</code>", parse_mode="html")
         return
     if res:
         result = f"<b>{search}</b>\n\n"
         result += f"<i>{res}</i>\n"
         result += f"""<a href="https://en.wikipedia.org/wiki/{search.replace(" ", "%20")}">Read more...</a>"""
         try:
-            await m.reply_text(result, parse_mode="html", disable_web_page_preview=True)
+            await eor(m, text=result, parse_mode="html", disable_web_page_preview=True)
         except MessageTooLong:
             with BytesIO(str.encode(await remove_markdown_and_html(result))) as f:
                 f.name = "result.txt"
@@ -92,13 +94,15 @@ async def wiki(_, m: Message):
 async def gdpr_remove(_, m: Message):
 
     if m.from_user.id in SUPPORT_STAFF:
-        await m.reply_text(
+        await eor(
+            m,
             "You're in my support staff, I cannot do that unless you are no longer a part of it!",
         )
         return
 
     Users(m.from_user.id).delete_user()
-    await m.reply_text(
+    await eor(
+        m,
         "Your personal data has been deleted.\n"
         "Note that this will not unban you from any chats, as that is telegram data, not Alita data."
         " Flooding, warns, and gbans are also preserved, as of "
@@ -116,16 +120,17 @@ async def gdpr_remove(_, m: Message):
 async def get_lyrics(_, m: Message):
 
     if len(m.text.split()) <= 1:
-        await m.reply_text(tlang(m, "general.check_help"))
+        await eor(m, text=tlang(m, "general.check_help"))
         return
 
     query = m.text.split(None, 1)[1]
     LOGGER.info(f"{m.from_user.id} used lyrics cmd in {m.chat.id}")
     song = ""
     if not query:
-        await m.edit_text(tlang(m, "utils.song.no_song_given"))
+        await eor(m, text=tlang(m, "utils.song.no_song_given"))
         return
-    em = await m.reply_text(
+    em = await eor(
+        m,
         (tlang(m, "utils.song.searching").format(song_name=query)),
     )
     song = Song.find_song(query)
@@ -137,7 +142,7 @@ async def get_lyrics(_, m: Message):
     else:
         reply = tlang(m, "utils.song.song_not_found")
     try:
-        await em.edit_text(reply)
+        await eor(reply)
     except MessageTooLong:
         with BytesIO(str.encode(await remove_markdown_and_html(reply))) as f:
             f.name = "lyrics.txt"
@@ -155,11 +160,11 @@ async def id_info(c: Alita, m: Message):
     LOGGER.info(f"{m.from_user.id} used id cmd in {m.chat.id}")
 
     if m.chat.type == "supergroup" and not m.reply_to_message:
-        await m.reply_text((tlang(m, "utils.id.group_id")).format(group_id=m.chat.id))
+        await eor(m, text=(tlang(m, "utils.id.group_id")).format(group_id=m.chat.id))
         return
 
     if m.chat.type == "private" and not m.reply_to_message:
-        await m.reply_text((tlang(m, "utils.id.my_id")).format(my_id=m.chat.id))
+        await eor(m, text=(tlang(m, "utils.id.my_id")).format(my_id=m.chat.id))
         return
 
     user_id, _, _ = await extract_user(c, m)
@@ -167,7 +172,8 @@ async def id_info(c: Alita, m: Message):
         if m.reply_to_message and m.reply_to_message.forward_from:
             user1 = m.reply_to_message.from_user
             user2 = m.reply_to_message.forward_from
-            await m.reply_text(
+            await eor(
+                m,
                 (tlang(m, "utils.id.id_main")).format(
                     orig_sender=(await mention_html(user2.first_name, user2.id)),
                     orig_id=f"<code>{user2.id}</code>",
@@ -180,22 +186,25 @@ async def id_info(c: Alita, m: Message):
             try:
                 user = await c.get_users(user_id)
             except PeerIdInvalid:
-                await m.reply_text(tlang(m, "utils.no_user_db"))
+                await eor(m, text=tlang(m, "utils.no_user_db"))
                 return
 
-            await m.reply_text(
+            await eor(
+                m,
                 f"{(await mention_html(user.first_name, user.id))}'s ID is <code>{user.id}</code>.",
                 parse_mode="HTML",
             )
     else:
         if m.chat.type == "private":
-            await m.reply_text(
+            await eor(
+                m,
                 (tlang(m, "utils.id.my_id")).format(
                     my_id=f"<code>{m.chat.id}</code>",
                 ),
             )
         else:
-            await m.reply_text(
+            await eor(
+                m,
                 (tlang(m, "utils.id.group_id")).format(
                     group_id=f"<code>{m.chat.id}</code>",
                 ),
@@ -209,12 +218,13 @@ async def id_info(c: Alita, m: Message):
 async def get_gifid(_, m: Message):
     if m.reply_to_message and m.reply_to_message.animation:
         LOGGER.info(f"{m.from_user.id} used gifid cmd in {m.chat.id}")
-        await m.reply_text(
+        await eor(
+            m,
             f"Gif ID:\n<code>{m.reply_to_message.animation.file_id}</code>",
             parse_mode="html",
         )
     else:
-        await m.reply_text(tlang(m, "utils.gif_id.reply_gif"))
+        await eor(m, text=tlang(m, "utils.gif_id.reply_gif"))
     return
 
 
@@ -226,7 +236,8 @@ async def github(_, m: Message):
         username = m.text.split(None, 1)[1]
         LOGGER.info(f"{m.from_user.id} used github cmd in {m.chat.id}")
     else:
-        await m.reply_text(
+        await eor(
+            m,
             f"Usage: <code>{PREFIX_HANDLER}github <username></code>",
         )
         return
@@ -234,7 +245,7 @@ async def github(_, m: Message):
     URL = f"https://api.github.com/users/{username}"
     result, resp = await AioHttp.get_json(URL)
     if resp.status == 404:
-        await m.reply_text(f"<code>{username}</code> not found")
+        await eor(m, text=f"<code>{username}</code> not found")
         return
 
     url = result.get("html_url", None)
@@ -252,7 +263,7 @@ async def github(_, m: Message):
         f"<b>Created at:</b> <code>{created_at}</code>"
     )
 
-    await m.reply_text(REPLY, quote=True)
+    await eor(m, text=REPLY, quote=True)
 
     return
 
@@ -264,11 +275,11 @@ async def my_info(c: Alita, m: Message):
     try:
         user_id, name, user_name = await extract_user(c, m)
     except PeerIdInvalid:
-        await m.reply_text(tlang(m, "utils.user_info.peer_id_error"))
+        await eor(m, text=tlang(m, "utils.user_info.peer_id_error"))
         return
     except ValueError as ef:
         if "Peer id invalid" in str(ef):
-            await m.reply_text(tlang(m, "utils.user_info.id_not_found"))
+            await eor(m, text=tlang(m, "utils.user_info.id_not_found"))
         return
     try:
         user = Users.get_user_info(int(user_id))
@@ -286,10 +297,11 @@ async def my_info(c: Alita, m: Message):
         user_name = user["username"]
         user_id = user["id"]
     except PeerIdInvalid:
-        await m.reply_text(tlang(m, "utils.no_user_db"))
+        await eor(m, text=tlang(m, "utils.no_user_db"))
         return
     except (RPCError, Exception) as ef:
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "general.some_error")).format(
                 SUPPORT_GROUP=SUPPORT_GROUP,
                 ef=ef,
@@ -326,7 +338,7 @@ async def my_info(c: Alita, m: Message):
     elif user_id in WHITELIST_USERS:
         text += tlang(m, "utils.user_info.support_user.whitelist")
 
-    await m.reply_text(text, parse_mode="html", disable_web_page_preview=True)
+    await eor(m, text=text, parse_mode="html", disable_web_page_preview=True)
 
     return
 
@@ -338,12 +350,13 @@ async def weebify(_, m: Message):
     elif m.reply_to_message and len(m.text.split()) == 1:
         args = m.reply_to_message.text
     else:
-        await m.reply_text(
+        await eor(
+            m,
             "Please reply to a message or enter text after command to weebify it.",
         )
         return
     if not args:
-        await m.reply_text(tlang(m, "utils.weebify.weebify_what"))
+        await eor(m, text=tlang(m, "utils.weebify.weebify_what"))
         return
 
     # Use split to convert to list
@@ -357,7 +370,8 @@ async def weebify(_, m: Message):
             weebycharacter = weebyfont[normiefont.index(normiecharacter)]
             string = string.replace(normiecharacter, weebycharacter)
 
-    await m.reply_text(
+    await eor(
+        m,
         (tlang(m, "utils.weebify.weebified_string").format(string=string)),
     )
     LOGGER.info(f"{m.from_user.id} weebified '{args}' in {m.chat.id}")
@@ -368,7 +382,7 @@ async def weebify(_, m: Message):
 @Alita.on_message(command("paste"))
 async def paste_it(_, m: Message):
 
-    replymsg = await m.reply_text((tlang(m, "utils.paste.pasting")), quote=True)
+    replymsg = await eor(m, text=(tlang(m, "utils.paste.pasting")), quote=True)
 
     if m.reply_to_message:
         if m.reply_to_message.document:
@@ -383,7 +397,7 @@ async def paste_it(_, m: Message):
 
     url = (await paste(txt))[0]
 
-    await replymsg.edit_text(
+    await eor(
         (tlang(m, "utils.paste.pasted_nekobin")),
         reply_markup=InlineKeyboardMarkup(
             [
@@ -407,7 +421,8 @@ async def translate(_, m: Message):
     trl = Translator()
     if m.reply_to_message and (m.reply_to_message.text or m.reply_to_message.caption):
         if len(m.text.split()) == 1:
-            await m.reply_text(
+            await eor(
+                m,
                 "Provide lang code.\n[Available options](https://telegra.ph/Lang-Codes-11-08).\n<b>Usage:</b> <code>/tr en</code>",
             )
             return
@@ -420,11 +435,12 @@ async def translate(_, m: Message):
         try:
             tekstr = await trl(text, targetlang=target_lang)
         except ValueError as err:
-            await m.reply_text(f"Error: <code>{str(err)}</code>")
+            await eor(m, text=f"Error: <code>{str(err)}</code>")
             return
     else:
         if len(m.text.split()) <= 2:
-            await m.reply_text(
+            await eor(
+                m,
                 "Provide lang code.\n[Available options](https://telegra.ph/Lang-Codes-11-08).\n<b>Usage:</b> <code>/tr en</code>",
             )
             return
@@ -434,10 +450,11 @@ async def translate(_, m: Message):
         try:
             tekstr = await trl(text, targetlang=target_lang)
         except ValueError as err:
-            await m.reply_text("Error: <code>{}</code>".format(str(err)))
+            await eor(m, text="Error: <code>{}</code>".format(str(err)))
             return
 
-    await m.reply_text(
+    await eor(
+        m,
         f"<b>Translated:</b> from {detectlang} to {target_lang} \n<code>``{tekstr.text}``</code>",
     )
     LOGGER.info(f"{m.from_user.id} used translate cmd in {m.chat.id}")

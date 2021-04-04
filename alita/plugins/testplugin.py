@@ -19,6 +19,8 @@
 from time import time
 
 from pyrogram.types import Message
+
+from alita import eor
 from alita.bot_class import Alita
 from alita.utils.custom_filters import sudo_command
 
@@ -26,7 +28,7 @@ from alita.utils.custom_filters import sudo_command
 @Alita.on_message(sudo_command("test"))
 async def test_bot(_, m: Message):
     start = time()
-    replymsg = await m.reply_text("Calculating...")
+    replymsg = await eor(m, text="Calculating...")
     end = round(time() - start, 2)
-    await replymsg.edit_text(f"Test complete\nTime Taken:{end} seconds")
+    await eor(f"Test complete\nTime Taken:{end} seconds")
     return

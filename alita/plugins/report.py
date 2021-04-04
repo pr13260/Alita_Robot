@@ -28,7 +28,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import LOGGER, SUPPORT_STAFF
+from alita import LOGGER, SUPPORT_STAFF, eor
 from alita.bot_class import Alita
 from alita.database.reporting_db import Reporting
 from alita.utils.custom_filters import admin_filter, command
@@ -48,16 +48,18 @@ async def report_setting(_, m: Message):
             if option in ("yes", "on", "true"):
                 db.set_settings(True)
                 LOGGER.info(f"{m.from_user.id} enabled reports for them")
-                await m.reply_text(
+                await eor(
+                    m,
                     "Turned on reporting! You'll be notified whenever anyone reports something in groups you are admin.",
                 )
 
             elif option in ("no", "off", "false"):
                 db.set_settings(False)
                 LOGGER.info(f"{m.from_user.id} disabled reports for them")
-                await m.reply_text("Turned off reporting! You wont get any reports.")
+                await eor(m, text="Turned off reporting! You wont get any reports.")
         else:
-            await m.reply_text(
+            await eor(
+                m,
                 f"Your current report preference is: `{(db.get_settings())}`",
             )
     else:
@@ -66,7 +68,8 @@ async def report_setting(_, m: Message):
             if option in ("yes", "on", "true"):
                 db.set_settings(True)
                 LOGGER.info(f"{m.from_user.id} enabled reports in {m.chat.id}")
-                await m.reply_text(
+                await eor(
+                    m,
                     "Turned on reporting! Admins who have turned on reports will be notified when /report "
                     "or @admin is called.",
                     quote=True,
@@ -75,12 +78,14 @@ async def report_setting(_, m: Message):
             elif option in ("no", "off", "false"):
                 db.set_settings(False)
                 LOGGER.info(f"{m.from_user.id} disabled reports in {m.chat.id}")
-                await m.reply_text(
+                await eor(
+                    m,
                     "Turned off reporting! No admins will be notified on /report or @admin.",
                     quote=True,
                 )
         else:
-            await m.reply_text(
+            await eor(
+                m,
                 f"This group's current setting is: `{(db.get_settings())}`",
             )
 
@@ -104,11 +109,11 @@ async def report_watcher(c: Alita, m: Message):
         admin_list = await c.get_chat_members(m.chat.id, filter="administrators")
 
         if reported_user.id == me.id:
-            await m.reply_text("Nice try.")
+            await eor(m, text="Nice try.")
             return
 
         if reported_user.id in SUPPORT_STAFF:
-            await m.reply_text("Uh? You reporting my support team?")
+            await eor(m, text="Uh? You reporting my support team?")
             return
 
         if m.chat.username:
@@ -154,7 +159,8 @@ async def report_watcher(c: Alita, m: Message):
         LOGGER.info(
             f"{m.from_user.id} reported msgid-{m.reply_to_message.message_id} to admins in {m.chat.id}",
         )
-        await m.reply_text(
+        await eor(
+            m,
             (
                 f"{(await mention_html(m.from_user.first_name, m.from_user.id))} "
                 "reported the message to the admins."

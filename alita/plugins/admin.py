@@ -28,7 +28,7 @@ from pyrogram.errors import (
 )
 from pyrogram.types import Message
 
-from alita import LOGGER, SUPPORT_GROUP, SUPPORT_STAFF
+from alita import LOGGER, SUPPORT_GROUP, SUPPORT_STAFF, eor
 from alita.bot_class import Alita
 from alita.database.approve_db import Approve
 from alita.tr_engine import tlang
@@ -83,15 +83,16 @@ async def adminlist_show(_, m: Message):
         adminstr += "\n\n<b>Bots:</b>\n"
         adminstr += "\n".join([f"- {i}" for i in mention_bots])
 
-        await m.reply_text(adminstr + "\n\n" + note)
+        await eor(m, text=adminstr + "\n\n" + note)
         LOGGER.info(f"Adminlist cmd use in {m.chat.id} by {m.from_user.id}")
 
     except Exception as ef:
         if str(ef) == str(m.chat.id):
-            await m.reply_text(tlang(m, "admin.adminlist.use_admin_cache"))
+            await eor(m, text=tlang(m, "admin.adminlist.use_admin_cache"))
         else:
             ef = str(ef) + f"{admin_list}\n"
-            await m.reply_text(
+            await eor(
+                m,
                 (tlang(m, "general.some_error")).format(
                     SUPPORT_GROUP=SUPPORT_GROUP,
                     ef=ef,
@@ -113,16 +114,17 @@ async def reload_admins(_, m: Message):
         m.from_user.id not in SUPPORT_STAFF
     ):
         if TEMP_ADMIN_CACHE_BLOCK[m.chat.id] == "manualblock":
-            await m.reply_text("Can only reload admin cache once per 10 mins!")
+            await eor(m, text="Can only reload admin cache once per 10 mins!")
             return
 
     try:
         await admin_cache_reload(m, "admincache")
         TEMP_ADMIN_CACHE_BLOCK[m.chat.id] = "manualblock"
-        await m.reply_text(tlang(m, "admin.adminlist.reloaded_admins"))
+        await eor(m, text=tlang(m, "admin.adminlist.reloaded_admins"))
         LOGGER.info(f"Admincache cmd use in {m.chat.id} by {m.from_user.id}")
     except RPCError as ef:
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "general.some_error")).format(
                 SUPPORT_GROUP=SUPPORT_GROUP,
                 ef=ef,
@@ -145,7 +147,8 @@ async def tag_admins(_, m: Message):
     mention_users = [(await mention_html("\u2063", admin[0])) for admin in user_admins]
     mention_users.sort(key=lambda x: x[1])
     mention_str = "".join(mention_users)
-    await m.reply_text(
+    await eor(
+        m,
         (
             f"{(await mention_html(m.from_user.first_name, m.from_user.id))}"
             f" reported the message to admins!{mention_str}"
@@ -162,13 +165,13 @@ async def promote_usr(c: Alita, m: Message):
     global ADMIN_CACHE
 
     if len(m.text.split()) == 1 and not m.reply_to_message:
-        await m.reply_text(tlang(m, "admin.promote.no_target"))
+        await eor(m, text=tlang(m, "admin.promote.no_target"))
         return
 
     user_id, user_first_name, user_name = await extract_user(c, m)
 
     if user_id == BOT_ID:
-        await m.reply_text("Huh, how can I even promote myself?")
+        await eor(m, text="Huh, how can I even promote myself?")
         return
 
     # If user is alreay admin
@@ -180,7 +183,8 @@ async def promote_usr(c: Alita, m: Message):
         }
 
     if user_id in admin_list:
-        await m.reply_text(
+        await eor(
+            m,
             "This user is already an admin, how am I supposed to re-promote them?",
         )
         return
@@ -197,7 +201,8 @@ async def promote_usr(c: Alita, m: Message):
         )
         LOGGER.info(f"{m.from_user.id} promoted {user_id} in {m.chat.id}")
 
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "admin.promote.promoted_user")).format(
                 promoter=(await mention_html(m.from_user.first_name, m.from_user.id)),
                 promoted=(await mention_html(user_first_name, user_id)),
@@ -224,13 +229,14 @@ async def promote_usr(c: Alita, m: Message):
             await admin_cache_reload(m, "promote_key_error")
 
     except ChatAdminRequired:
-        await m.reply_text(tlang(m, "admin.not_admin"))
+        await eor(m, text=tlang(m, "admin.not_admin"))
     except RightForbidden:
-        await m.reply_text(tlang(m, "admin.promote.bot_no_right"))
+        await eor(m, text=tlang(m, "admin.promote.bot_no_right"))
     except UserAdminInvalid:
-        await m.reply_text(tlang(m, "admin.user_admin_invalid"))
+        await eor(m, text=tlang(m, "admin.user_admin_invalid"))
     except RPCError as ef:
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "general.some_error")).format(
                 SUPPORT_GROUP=SUPPORT_GROUP,
                 ef=ef,
@@ -251,13 +257,13 @@ async def demote_usr(c: Alita, m: Message):
     global ADMIN_CACHE
 
     if len(m.text.split()) == 1 and not m.reply_to_message:
-        await m.reply_text(tlang(m, "admin.demote.no_target"))
+        await eor(m, text=tlang(m, "admin.demote.no_target"))
         return
 
     user_id, user_first_name, _ = await extract_user(c, m)
 
     if user_id == BOT_ID:
-        await m.reply_text("Get an admin to demote me!")
+        await eor(m, text="Get an admin to demote me!")
         return
 
     # If user not alreay admin
@@ -269,7 +275,8 @@ async def demote_usr(c: Alita, m: Message):
         }
 
     if user_id not in admin_list:
-        await m.reply_text(
+        await eor(
+            m,
             "This user is not an admin, how am I supposed to re-demote them?",
         )
         return
@@ -295,7 +302,8 @@ async def demote_usr(c: Alita, m: Message):
         except (KeyError, StopIteration):
             await admin_cache_reload(m, "demote_key_stopiter_error")
 
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "admin.demote.demoted_user")).format(
                 demoter=(await mention_html(m.from_user.first_name, m.from_user.id)),
                 demoted=(await mention_html(user_first_name, user_id)),
@@ -304,13 +312,14 @@ async def demote_usr(c: Alita, m: Message):
         )
 
     except ChatAdminRequired:
-        await m.reply_text(tlang(m, "admin.not_admin"))
+        await eor(m, text=tlang(m, "admin.not_admin"))
     except RightForbidden:
-        await m.reply_text(tlang(m, "admin.demote.bot_no_right"))
+        await eor(m, text=tlang(m, "admin.demote.bot_no_right"))
     except UserAdminInvalid:
-        await m.reply_text(tlang(m, "admin.user_admin_invalid"))
+        await eor(m, text=tlang(m, "admin.user_admin_invalid"))
     except RPCError as ef:
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "general.some_error")).format(
                 SUPPORT_GROUP=SUPPORT_GROUP,
                 ef=ef,
@@ -336,12 +345,13 @@ async def get_invitelink(c: Alita, m: Message):
         if user.can_invite_users or user.status == "creator":
             pass
         else:
-            await m.reply_text(tlang(m, "admin.no_user_invite_perm"))
+            await eor(m, text=tlang(m, "admin.no_user_invite_perm"))
             return False
 
     try:
         link = await c.export_chat_invite_link(m.chat.id)
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "admin.invitelink")).format(
                 chat_name=m.chat.id,
                 link=link,
@@ -350,13 +360,14 @@ async def get_invitelink(c: Alita, m: Message):
         )
         LOGGER.info(f"{m.from_user.id} exported invite link in {m.chat.id}")
     except ChatAdminRequired:
-        await m.reply_text(tlang(m, "admin.not_admin"))
+        await eor(m, text=tlang(m, "admin.not_admin"))
     except ChatAdminInviteRequired:
-        await m.reply_text(tlang(m, "admin.no_invite_perm"))
+        await eor(m, text=tlang(m, "admin.no_invite_perm"))
     except RightForbidden:
-        await m.reply_text(tlang(m, "admin.no_user_invite_perm"))
+        await eor(m, text=tlang(m, "admin.no_user_invite_perm"))
     except RPCError as ef:
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "general.some_error")).format(
                 SUPPORT_GROUP=SUPPORT_GROUP,
                 ef=ef,

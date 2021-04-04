@@ -26,7 +26,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import LOGGER
+from alita import LOGGER, eor
 from alita.bot_class import Alita
 from alita.database.lang_db import Langs
 from alita.tr_engine import lang_dict, tlang
@@ -69,7 +69,8 @@ async def gen_langs_kb():
 @Alita.on_callback_query(filters.regex("^chlang$"))
 async def chlang_callback(_, q: CallbackQuery):
 
-    await q.message.edit_text(
+    await eor(
+        q,
         (tlang(q, "langs.changelang")),
         reply_markup=InlineKeyboardMarkup(
             [
@@ -115,7 +116,8 @@ async def set_lang_callback(_, q: CallbackQuery):
         )
     else:
         keyboard = None
-    await q.message.edit_text(
+    await eor(
+        q,
         f"🌐 {((tlang(q, 'langs.changed')).format(lang_code=lang_code))}",
         reply_markup=keyboard,
     )
@@ -132,23 +134,26 @@ async def set_lang(_, m: Message):
     args = m.text.split()
 
     if len(args) > 2:
-        await m.reply_text(tlang(m, "langs.correct_usage"))
+        await eor(m, text=tlang(m, "langs.correct_usage"))
         return
     if len(args) == 2:
         lang_code = args[1]
         avail_langs = set(lang_dict.keys())
         if lang_code not in avail_langs:
-            await m.reply_text(
+            await eor(
+                m,
                 f"Please choose a valid language code from: {', '.join(avail_langs)}",
             )
             return
         Langs(m.chat.id).set_lang(lang_code)
         LOGGER.info(f"{m.from_user.id} change language to {lang_code} in {m.chat.id}")
-        await m.reply_text(
+        await eor(
+            m,
             f"🌐 {((tlang(m, 'langs.changed')).format(lang_code=lang_code))}",
         )
         return
-    await m.reply_text(
+    await eor(
+        m,
         (tlang(m, "langs.changelang")),
         reply_markup=InlineKeyboardMarkup([*(await gen_langs_kb())]),
     )

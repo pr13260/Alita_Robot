@@ -17,6 +17,8 @@
 
 
 from pyrogram.types import Message
+
+from alita import eor
 from alita.bot_class import Alita
 from alita.database import db
 from alita.database.antispam_db import GBan
@@ -49,7 +51,7 @@ async def get_stats(_, m: Message):
     warns_db = Warns
     warns_settings_db = WarnSettings
 
-    replymsg = await m.reply_text("<b><i>Fetching Stats...</i></b>", quote=True)
+    replymsg = await eor(m, text="<b><i>Fetching Stats...</i></b>", quote=True)
     rply = (
         f"<b>Users:</b> <code>{(userdb.count_users())}</code> in <code>{(chatdb.count_chats())}</code> chats\n"
         f"<b>Anti Channel Pin:</b> <code>{(pinsdb.count_chats('antichannelpin'))}</code> enabled chats\n"
@@ -75,12 +77,12 @@ async def get_stats(_, m: Message):
         f"<b>GBanned Users:</b> <code>{(gbandb.count_gbans())}</code>\n"
         f"<b>Approved People</b>: <code>{(appdb.count_all_approved())}</code> in <code>{(appdb.count_approved_chats())}</code> chats\n"
     )
-    await replymsg.edit_text(rply, parse_mode="html")
+    await eor(rply, parse_mode="html")
     return
 
 
 @Alita.on_message(dev_command("dbstats"))
 async def get_dbstats(_, m: Message):
     db_stats = f"\n<b>Database Stats:</b>\n<code>{(db.command('dbstats'))}</code>"
-    await m.reply_text(db_stats, parse_mode="html")
+    await eor(m, text=db_stats, parse_mode="html")
     return

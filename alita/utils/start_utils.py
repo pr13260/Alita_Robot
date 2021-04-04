@@ -26,7 +26,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import HELP_COMMANDS, LOGGER, SUPPORT_GROUP
+from alita import HELP_COMMANDS, LOGGER, SUPPORT_GROUP, eor
 from alita.bot_class import Alita
 from alita.database.chats_db import Chats
 from alita.database.notes_db import Notes
@@ -140,7 +140,7 @@ async def get_private_note(c: Alita, m: Message, help_option: str):
             note_hash = note[1]
             rply += f"- [{note_name}](https://t.me/{BOT_USERNAME}?start=note_{chat_id}_{note_hash})\n"
         rply += "You can retrieve these notes by tapping on the notename."
-        await m.reply_text(rply, disable_web_page_preview=True, quote=True)
+        await eor(m, text=rply, disable_web_page_preview=True, quote=True)
         return
 
     if len(help_lst) == 3:
@@ -150,12 +150,13 @@ async def get_private_note(c: Alita, m: Message, help_option: str):
         return
 
     if not getnotes:
-        await m.reply_text("Note does not exist", quote=True)
+        await eor(m, text="Note does not exist", quote=True)
         return
 
     msgtype = getnotes["msgtype"]
     if not msgtype:
-        await m.reply_text(
+        await eor(
+            m,
             "<b>Error:</b> Cannot find a type for this note!!",
             quote=True,
         )
@@ -167,7 +168,8 @@ async def get_private_note(c: Alita, m: Message, help_option: str):
         button = InlineKeyboardMarkup(button) if button else None
         if button:
             try:
-                await m.reply_text(
+                await eor(
+                    m,
                     teks,
                     reply_markup=button,
                     disable_web_page_preview=True,
@@ -175,7 +177,8 @@ async def get_private_note(c: Alita, m: Message, help_option: str):
                 )
                 return
             except RPCError as ef:
-                await m.reply_text(
+                await eor(
+                    m,
                     "An error has occured! Cannot parse note.",
                     quote=True,
                 )
@@ -183,7 +186,7 @@ async def get_private_note(c: Alita, m: Message, help_option: str):
                 LOGGER.error(format_exc())
                 return
         else:
-            await m.reply_text(teks, quote=True, disable_web_page_preview=True)
+            await eor(m, text=teks, quote=True, disable_web_page_preview=True)
             return
     elif msgtype in (
         Types.STICKER,
@@ -210,7 +213,8 @@ async def get_private_note(c: Alita, m: Message, help_option: str):
                 )
                 return
             except RPCError as ef:
-                await m.reply_text(
+                await eor(
+                    m,
                     teks,
                     quote=True,
                     reply_markup=button,
@@ -235,7 +239,8 @@ async def get_private_rules(_, m: Message, help_option: str):
     chat_id = int(help_option.split("_")[1])
     rules = Rules(chat_id).get_rules()
     chat_title = Chats.get_chat_info(chat_id)["chat_name"]
-    await m.reply_text(
+    await eor(
+        m,
         (tlang(m, "rules.get_rules")).format(
             chat=chat_title,
             rules=rules,

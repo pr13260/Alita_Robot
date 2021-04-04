@@ -24,7 +24,7 @@ from pyrogram import filters
 from pyrogram.errors import ChatAdminRequired, RPCError, UserAdminInvalid
 from pyrogram.types import ChatPermissions, Message
 
-from alita import LOGGER, MESSAGE_DUMP, SUPPORT_STAFF
+from alita import LOGGER, MESSAGE_DUMP, SUPPORT_STAFF, eor
 from alita.bot_class import Alita
 from alita.database.antispam_db import ANTISPAM_BANNED, GBan
 from alita.database.approve_db import Approve
@@ -54,7 +54,8 @@ async def antichanpin_cleanlinked(c: Alita, m: Message):
             await c.delete_messages(m.chat.id, msg_id)
             LOGGER.info(f"CleanLinked: msgid-{m.message_id} cleaned in {m.chat.id}")
     except ChatAdminRequired:
-        await m.reply_text(
+        await eor(
+            m,
             "Disabled antichannelpin as I don't have enough admin rights!",
         )
         pins_db.antichannelpin_off()
@@ -77,7 +78,8 @@ async def bl_watcher(_, m: Message):
     async def perform_action_blacklist(m: Message, action: str):
         if action == "kick":
             await m.chat.kick_member(m.from_user.id, int(time() + 45))
-            await m.reply_text(
+            await eor(
+                m,
                 tlang(m, "blacklist.bl_watcher.action_kick").format(
                     user=(
                         m.from_user.username
@@ -92,7 +94,8 @@ async def bl_watcher(_, m: Message):
                     m.from_user.id,
                 )
             )
-            await m.reply_text(
+            await eor(
+                m,
                 tlang(m, "blacklist.bl_watcher.action_ban").format(
                     user=(
                         m.from_user.username
@@ -119,7 +122,8 @@ async def bl_watcher(_, m: Message):
                 ),
             )
 
-            await m.reply_text(
+            await eor(
+                m,
                 tlang(m, "blacklist.bl_watcher.action_mute").format(
                     user=(
                         m.from_user.username
@@ -147,14 +151,16 @@ async def bl_watcher(_, m: Message):
                 elif warn_settings["warn_mode"] == "mute":
                     await m.chat.restrict_member(m.from_user.id, ChatPermissions())
                     action = "muted"
-                await m.reply_text(
+                await eor(
+                    m,
                     (
                         f"Warnings {num}/{warn_settings['warn_limit']}\n"
                         f"{(await mention_html(m.from_user.first_name, m.from_user.id))} has been <b>{action}!</b>"
                     ),
                 )
                 return
-            await m.reply_text(
+            await eor(
+                m,
                 (
                     f"{(await mention_html(m.from_user.first_name, m.from_user.id))} warned {num}/{warn_settings['warn_limit']}\n"
                     f"Last warn was for:\n<i>{warn_reason}</i>"
@@ -224,7 +230,8 @@ async def gban_watcher(c: Alita, m: Message):
         try:
             await m.chat.kick_member(m.from_user.id)
             await m.delete(m.message_id)  # Delete users message!
-            await m.reply_text(
+            await eor(
+                m,
                 (tlang(m, "antispam.watcher_banned")).format(
                     user_gbanned=(
                         await mention_html(m.from_user.first_name, m.from_user.id)

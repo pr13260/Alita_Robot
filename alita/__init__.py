@@ -18,12 +18,17 @@
 
 from datetime import datetime
 from importlib import import_module as imp_mod
+from inspect import getfullargspec
 from logging import INFO, WARNING, FileHandler, StreamHandler, basicConfig, getLogger
 from os import environ, mkdir, path
 from sys import exit as sysexit
 from sys import stdout, version_info
 from time import time
 from traceback import format_exc
+
+from pyrogram import Client
+from pyrogram.types import Message
+from pyrogram.types.bots_and_keyboards.callback_query import CallbackQuery
 
 LOG_DATETIME = datetime.now().strftime("%d_%m_%Y-%H_%M_%S")
 LOGDIR = f"{__name__}/logs"
@@ -114,7 +119,7 @@ BOT_NAME = ""
 BOT_ID = 0
 
 
-async def get_self(c):
+async def get_self(c: Client):
     """Gets the information about bot."""
     global BOT_USERNAME, BOT_NAME, BOT_ID
     getbot = await c.get_me()
@@ -122,6 +127,19 @@ async def get_self(c):
     BOT_USERNAME = getbot.username
     BOT_ID = getbot.id
     return getbot
+
+
+# The below code is from Nana-Remix's Repository
+# Original can be found here:
+# https://github.com/pokurt/Nana-Remix/blob/e7d393df2e93964c3d06f9fe3423b7fca808dbfb/nana/__init__.py#L192
+async def eor(m: Message or CallbackQuery, **kwargs):
+    if isinstance(m, CallbackQuery):
+        m = m.message
+    print(m)
+    print(type(m))
+    func = m.edit_text if m.from_user.is_self else m.reply
+    spec = getfullargspec(func.__wrapped__).args
+    await func(**{k: v for k, v in kwargs.items() if k in spec})
 
 
 async def load_cmds(all_plugins):

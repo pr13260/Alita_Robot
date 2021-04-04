@@ -34,7 +34,7 @@ from pyrogram.errors import (
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from speedtest import Speedtest
 
-from alita import DEV_PREFIX_HANDLER, LOGFILE, LOGGER, MESSAGE_DUMP, UPTIME
+from alita import DEV_PREFIX_HANDLER, LOGFILE, LOGGER, MESSAGE_DUMP, UPTIME, eor
 from alita.bot_class import Alita
 from alita.database.chats_db import Chats
 from alita.tr_engine import tlang
@@ -49,16 +49,16 @@ from alita.utils.paste import paste
 async def ping(_, m: Message):
     LOGGER.info(f"{m.from_user.id} used ping cmd in {m.chat.id}")
     start = time()
-    replymsg = await m.reply_text((tlang(m, "utils.ping.pinging")), quote=True)
+    replymsg = await eor(m, text=(tlang(m, "utils.ping.pinging")), quote=True)
     delta_ping = time() - start
-    await replymsg.edit_text(f"<b>Pong!</b>\n{delta_ping * 1000:.3f} ms")
+    await eor(f"<b>Pong!</b>\n{delta_ping * 1000:.3f} ms")
     return
 
 
 @Alita.on_message(dev_command("logs"))
 async def send_log(c: Alita, m: Message):
 
-    replymsg = await m.reply_text("Sending logs...!")
+    replymsg = await eor(m, text="Sending logs...!")
     await c.send_message(
         MESSAGE_DUMP,
         f"#LOGS\n\n**User:** {(await mention_markdown(m.from_user.first_name, m.from_user.id))}",
@@ -81,14 +81,15 @@ async def send_log(c: Alita, m: Message):
 async def group_info(c: Alita, m: Message):
 
     if not len(m.text.split()) == 2:
-        await m.reply_text(
+        await eor(
+            m,
             f"It works like this: <code>{DEV_PREFIX_HANDLER} chat_id</code>",
         )
         return
 
     chat_id = m.text.split(None, 1)[1]
 
-    replymsg = await m.reply_text("Fetching info about group...!")
+    replymsg = await eor(m, text="Fetching info about group...!")
     grp_data = await c.get_chat(chat_id)
     msg = (
         f"Information for group: {chat_id}\n\n"
@@ -97,7 +98,7 @@ async def group_info(c: Alita, m: Message):
         f"Type: {grp_data['type']}\n"
         f"Group ID: {grp_data['id']}"
     )
-    await replymsg.edit_text(msg)
+    await eor(msg)
     return
 
 
@@ -108,12 +109,12 @@ async def test_speed(c: Alita, m: Message):
         MESSAGE_DUMP,
         f"#SPEEDTEST\n\n**User:** {(await mention_markdown(m.from_user.first_name, m.from_user.id))}",
     )
-    sent = await m.reply_text(tlang(m, "dev.speedtest.start_speedtest"))
+    sent = await eor(m, text=tlang(m, "dev.speedtest.start_speedtest"))
     s = Speedtest()
     bs = s.get_best_server()
     dl = round(s.download() / 1024 / 1024, 2)
     ul = round(s.upload() / 1024 / 1024, 2)
-    await sent.edit_text(
+    await eor(
         (tlang(m, "dev.speedtest.speedtest_txt")).format(
             host=bs["sponsor"],
             ping=int(bs["latency"]),
@@ -142,7 +143,7 @@ async def neofetch_stats(_, m: Message):
         OUTPUT = "No Output"
 
     try:
-        await m.reply_text(OUTPUT, quote=True)
+        await eor(m, text=OUTPUT, quote=True)
     except MessageTooLong:
         with BytesIO(str.encode(await remove_markdown_and_html(OUTPUT))) as f:
             f.name = "neofetch.txt"
@@ -155,9 +156,9 @@ async def neofetch_stats(_, m: Message):
 async def evaluate_code(c: Alita, m: Message):
 
     if len(m.text.split()) == 1:
-        await m.reply_text(tlang(m, "dev.execute_cmd_err"))
+        await eor(m, text=tlang(m, "dev.execute_cmd_err"))
         return
-    sm = await m.reply_text("`Processing...`")
+    sm = await eor(m, text="`Processing...`")
     cmd = m.text.split(None, maxsplit=1)[1]
 
     reply_to_id = m.message_id
@@ -218,9 +219,9 @@ async def aexec(code, c, m):
 async def execution(_, m: Message):
 
     if len(m.text.split()) == 1:
-        await m.reply_text(tlang(m, "dev.execute_cmd_err"))
+        await eor(m, text=tlang(m, "dev.execute_cmd_err"))
         return
-    sm = await m.reply_text("`Processing...`")
+    sm = await eor(m, text="`Processing...`")
     cmd = m.text.split(maxsplit=1)[1]
     reply_to_id = m.message_id
     if m.reply_to_message:
@@ -246,7 +247,7 @@ async def execution(_, m: Message):
     OUTPUT += f"<b>stdout</b>: \n<code>{o}</code>"
 
     try:
-        await sm.edit_text(OUTPUT)
+        await eor(OUTPUT)
     except MessageTooLong:
         with BytesIO(str.encode(await remove_markdown_and_html(OUTPUT))) as f:
             f.name = "sh.txt"
@@ -268,7 +269,8 @@ async def public_ip(c: Alita, m: Message):
         MESSAGE_DUMP,
         f"#IP\n\n**User:** {(await mention_markdown(m.from_user.first_name, m.from_user.id))}",
     )
-    await m.reply_text(
+    await eor(
+        m,
         (tlang(m, "dev.bot_ip")).format(ip=f"<code>{ip}</code>"),
         quote=True,
     )
@@ -277,7 +279,7 @@ async def public_ip(c: Alita, m: Message):
 
 @Alita.on_message(dev_command("chatlist"))
 async def chats(c: Alita, m: Message):
-    exmsg = await m.reply_text(tlang(m, "dev.chatlist.exporting"))
+    exmsg = await eor(m, text=tlang(m, "dev.chatlist.exporting"))
     await c.send_message(
         MESSAGE_DUMP,
         f"#CHATLIST\n\n**User:** {(await mention_markdown(m.from_user.first_name, m.from_user.id))}",
@@ -307,7 +309,7 @@ async def chats(c: Alita, m: Message):
             sleep(60)
         except RPCError as ef:
             LOGGER.error(ef)
-            await m.reply_text(f"**Error:**\n{ef}")
+            await eor(m, text=f"**Error:**\n{ef}")
 
     with BytesIO(str.encode(await remove_markdown_and_html(chatfile))) as f:
         f.name = "chatlist.txt"
@@ -322,28 +324,28 @@ async def chats(c: Alita, m: Message):
 @Alita.on_message(dev_command("uptime"))
 async def uptime(_, m: Message):
     up = strftime("%Hh %Mm %Ss", gmtime(time() - UPTIME))
-    await m.reply_text((tlang(m, "dev.uptime")).format(uptime=up), quote=True)
+    await eor(m, text=(tlang(m, "dev.uptime")).format(uptime=up), quote=True)
     return
 
 
 @Alita.on_message(dev_command("leavechat"))
 async def leave_chat(c: Alita, m: Message):
     if len(m.text.split()) != 2:
-        await m.reply_text("Supply a chat id which I should leave!", quoet=True)
+        await eor(m, text="Supply a chat id which I should leave!", quoet=True)
         return
 
     chat_id = m.text.split(None, 1)[1]
 
-    replymsg = await m.reply_text(f"Trying to leave chat {chat_id}...", quote=True)
+    replymsg = await eor(m, text=f"Trying to leave chat {chat_id}...", quote=True)
     try:
         await c.send_message(chat_id, "Bye everyone!")
         await c.leave_chat(chat_id)
-        await replymsg.edit_text(f"Left <code>{chat_id}</code>.")
+        await eor(f"Left <code>{chat_id}</code>.")
     except PeerIdInvalid:
-        await replymsg.edit_text("Haven't seen this group in this session")
+        await eor("Haven't seen this group in this session")
     except RPCError as ef:
         LOGGER.error(ef)
-        await replymsg.edit_text(f"Failed to leave chat!\nError: <code>{ef}</code>.")
+        await eor(f"Failed to leave chat!\nError: <code>{ef}</code>.")
     return
 
 
@@ -352,10 +354,10 @@ async def chat_broadcast(c: Alita, m: Message):
     if m.reply_to_message:
         msg = m.reply_to_message.text.markdown
     else:
-        await m.reply_text("Reply to a message to broadcast it")
+        await eor(m, text="Reply to a message to broadcast it")
         return
 
-    exmsg = await m.reply_text("Started broadcasting!")
+    exmsg = await eor(m, text="Started broadcasting!")
     all_chats = (Chats.list_chats_by_id()) or {}
     err_str, done_broadcast = "", 0
 
@@ -369,7 +371,7 @@ async def chat_broadcast(c: Alita, m: Message):
             err_str += str(ef)
             continue
 
-    await exmsg.edit_text(
+    await eor(
         f"Done broadcasting ✅\nSent message to {done_broadcast} chats",
     )
 

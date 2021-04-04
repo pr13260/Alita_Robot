@@ -21,6 +21,7 @@ from secrets import choice
 
 from pyrogram.types import Message
 
+from alita import eor
 from alita.bot_class import Alita
 from alita.tr_engine import tlang
 from alita.utils import fun_strings
@@ -32,7 +33,8 @@ from alita.utils.extract_user import extract_user
 async def fun_shout(_, m: Message):
 
     if len(m.text.split()) == 1:
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "general.check_help")),
             quote=True,
         )
@@ -46,13 +48,13 @@ async def fun_shout(_, m: Message):
     result[0] = text[0]
     result = "".join(result)
     msg = "```\n" + result + "```"
-    await m.reply_text(msg, parse_mode="MARKDOWN")
+    await eor(m, text=msg, parse_mode="MARKDOWN")
     return
 
 
 @Alita.on_message(command("runs"))
 async def fun_run(_, m: Message):
-    await m.reply_text(choice(fun_strings.RUN_STRINGS))
+    await eor(m, text=choice(fun_strings.RUN_STRINGS))
     return
 
 

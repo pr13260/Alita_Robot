@@ -25,7 +25,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import HELP_COMMANDS, LOGGER
+from alita import HELP_COMMANDS, LOGGER, eor
 from alita.bot_class import Alita
 from alita.tr_engine import tlang
 from alita.utils.custom_filters import command
@@ -43,7 +43,7 @@ from alita.utils.start_utils import (
 )
 async def donate(_, m: Message):
     LOGGER.info(f"{m.from_user.id} fetched donation text in {m.chat.id}")
-    await m.reply_text(tlang(m, "general.donate_owner"))
+    await eor(m, text=tlang(m, "general.donate_owner"))
     return
 
 
@@ -69,7 +69,8 @@ async def start(c: Alita, m: Message):
             if not help_msg:
                 return
 
-            await m.reply_text(
+            await eor(
+                m,
                 help_msg,
                 parse_mode="markdown",
                 reply_markup=InlineKeyboardMarkup(help_kb),
@@ -78,7 +79,8 @@ async def start(c: Alita, m: Message):
             )
             return
         try:
-            await m.reply_text(
+            await eor(
+                m,
                 (tlang(m, "start.private")),
                 reply_markup=(await gen_start_kb(m)),
                 quote=True,
@@ -87,7 +89,8 @@ async def start(c: Alita, m: Message):
         except UserIsBlocked:
             LOGGER.warning(f"Bot blocked by {m.from_user.id}")
     else:
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "start.group")),
             quote=True,
         )
@@ -98,7 +101,8 @@ async def start(c: Alita, m: Message):
 async def start_back(_, q: CallbackQuery):
 
     try:
-        await q.message.edit_text(
+        await eor(
+            q,
             (tlang(q, "start.private")),
             reply_markup=(await gen_start_kb(q.message)),
             disable_web_page_preview=True,
@@ -124,14 +128,16 @@ async def commands_menu(_, q: CallbackQuery):
         ],
     )
     try:
-        await q.message.edit_text(
+        await eor(
+            q,
             (tlang(q, "general.commands_available")),
             reply_markup=keyboard,
         )
     except MessageNotModified:
         pass
     except QueryIdInvalid:
-        await q.message.reply_text(
+        await eor(
+            q,
             (tlang(q, "general.commands_available")),
             reply_markup=keyboard,
         )
@@ -156,7 +162,8 @@ async def help_menu(_, m: Message):
             f"{m.from_user.id} fetched help for '{help_option}' text in {m.chat.id}",
         )
         if m.chat.type == "private":
-            await m.reply_text(
+            await eor(
+                m,
                 help_msg,
                 parse_mode="markdown",
                 reply_markup=InlineKeyboardMarkup(help_kb),
@@ -164,7 +171,8 @@ async def help_menu(_, m: Message):
                 disable_web_page_preview=True,
             )
         else:
-            await m.reply_text(
+            await eor(
+                m,
                 (tlang(m, "start.public_help").format(help_option=help_option)),
                 reply_markup=InlineKeyboardMarkup(
                     [
@@ -204,7 +212,8 @@ async def help_menu(_, m: Message):
             )
             msg = tlang(m, "start.pm_for_help")
 
-        await m.reply_text(
+        await eor(
+            m,
             msg,
             reply_markup=keyboard,
         )
@@ -230,7 +239,8 @@ async def get_module_info(_, q: CallbackQuery):
             ),
         ],
     ]
-    await q.message.edit_text(
+    await eor(
+        q,
         help_msg,
         parse_mode="markdown",
         reply_markup=InlineKeyboardMarkup(help_kb),

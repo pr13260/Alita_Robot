@@ -24,7 +24,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import LOGGER
+from alita import LOGGER, eor
 from alita.bot_class import Alita
 from alita.tr_engine import tlang
 from alita.utils.custom_filters import command
@@ -61,7 +61,8 @@ async def gen_formatting_kb(m):
     command(["markdownhelp", "formatting"]) & filters.private,
 )
 async def markdownhelp(_, m: Message):
-    await m.reply_text(
+    await eor(
+        m,
         tlang(m, __help__),
         quote=True,
         reply_markup=(await gen_formatting_kb(m)),
@@ -85,19 +86,22 @@ async def get_formatting_info(_, q: CallbackQuery):
     )
 
     if cmd == "md_formatting":
-        await q.message.edit_text(
+        await eor(
+            q,
             tlang(q, "formatting.md_help"),
             reply_markup=kb,
             parse_mode="html",
         )
     elif cmd == "fillings":
-        await q.message.edit_text(
+        await eor(
+            q,
             tlang(q, "formatting.filling_help"),
             reply_markup=kb,
             parse_mode="html",
         )
     elif cmd == "random_content":
-        await q.message.edit_text(
+        await eor(
+            q,
             tlang(q, "formatting.random_help"),
             reply_markup=kb,
             parse_mode="html",
@@ -109,7 +113,8 @@ async def get_formatting_info(_, q: CallbackQuery):
 
 @Alita.on_callback_query(filters.regex("^back."))
 async def send_mod_help(_, q: CallbackQuery):
-    await q.message.edit_text(
+    await eor(
+        q,
         (tlang(q, "plugins.formatting.help")),
         reply_markup=(await gen_formatting_kb(q.message)),
     )

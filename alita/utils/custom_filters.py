@@ -24,7 +24,14 @@ from typing import List
 from pyrogram.filters import create
 from pyrogram.types import CallbackQuery, Message
 
-from alita import DEV_PREFIX_HANDLER, DEV_USERS, OWNER_ID, PREFIX_HANDLER, SUDO_USERS
+from alita import (
+    DEV_PREFIX_HANDLER,
+    DEV_USERS,
+    OWNER_ID,
+    PREFIX_HANDLER,
+    SUDO_USERS,
+    eor,
+)
 from alita.tr_engine import tlang
 from alita.utils.caching import ADMIN_CACHE, admin_cache_reload
 
@@ -200,7 +207,7 @@ async def admin_check_func(_, __, m: Message or CallbackQuery):
     if m.from_user.id in admin_group:
         return True
 
-    await m.reply_text(tlang(m, "general.no_admin_cmd_perm"))
+    await eor(m, text=tlang(m, "general.no_admin_cmd_perm"))
 
     return False
 
@@ -228,7 +235,7 @@ async def owner_check_func(_, __, m: Message or CallbackQuery):
             msg = "You're an admin only, stay in your limits!"
         else:
             msg = "Do you think that you can execute owner commands?"
-        await m.reply_text(msg)
+        await eor(m, text=msg)
 
     return status
 
@@ -252,7 +259,7 @@ async def restrict_check_func(_, __, m: Message or CallbackQuery):
         status = True
     else:
         status = False
-        await m.reply_text(tlang(m, "admin.no_restrict_perm"))
+        await eor(m, text=tlang(m, "admin.no_restrict_perm"))
 
     return status
 
@@ -276,7 +283,7 @@ async def promote_check_func(_, __, m):
         status = True
     else:
         status = False
-        await m.reply_text(tlang(m, "admin.promote.no_promote_perm"))
+        await eor(m, text=tlang(m, "admin.promote.no_promote_perm"))
 
     return status
 

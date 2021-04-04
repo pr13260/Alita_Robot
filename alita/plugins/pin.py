@@ -25,7 +25,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import LOGGER, SUPPORT_GROUP
+from alita import LOGGER, SUPPORT_GROUP, eor
 from alita.bot_class import Alita
 from alita.database.pins_db import Pins
 from alita.tr_engine import tlang
@@ -55,16 +55,18 @@ async def pin_message(_, m: Message):
             message_link = (
                 f"https://t.me/c/{link_chat_id}/{m.reply_to_message.message_id}"
             )
-            await m.reply_text(
+            await eor(
+                m,
                 tlang(m, "pin.pinned_msg").format(message_link=message_link),
             )
 
         except ChatAdminRequired:
-            await m.reply_text(tlang(m, "admin.not_admin"))
+            await eor(m, text=tlang(m, "admin.not_admin"))
         except RightForbidden:
-            await m.reply_text(tlang(m, "pin.no_rights_pin"))
+            await eor(m, text=tlang(m, "pin.no_rights_pin"))
         except RPCError as ef:
-            await m.reply_text(
+            await eor(
+                m,
                 (tlang(m, "general.some_error")).format(
                     SUPPORT_GROUP=SUPPORT_GROUP,
                     ef=ef,
@@ -72,7 +74,7 @@ async def pin_message(_, m: Message):
             )
             LOGGER.error(ef)
     else:
-        await m.reply_text("Reply to a message to pin it!")
+        await eor(m, text="Reply to a message to pin it!")
 
     return
 
@@ -86,15 +88,16 @@ async def unpin_message(c: Alita, m: Message):
             LOGGER.info(
                 f"{m.from_user.id} unpinned msgid-{m.reply_to_message.message_id} in {m.chat.id}",
             )
-            await m.reply_text(tlang(m, "pin.unpinned_last_msg"))
+            await eor(m, text=tlang(m, "pin.unpinned_last_msg"))
         else:
-            await m.reply_text(tlang(m, "pin.reply_to_unpin"))
+            await eor(m, text=tlang(m, "pin.reply_to_unpin"))
     except ChatAdminRequired:
-        await m.reply_text(tlang(m, "admin.not_admin"))
+        await eor(m, text=tlang(m, "admin.not_admin"))
     except RightForbidden:
-        await m.reply_text(tlang(m, "pin.no_rights_unpin"))
+        await eor(m, text=tlang(m, "pin.no_rights_unpin"))
     except RPCError as ef:
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "general.some_error")).format(
                 SUPPORT_GROUP=SUPPORT_GROUP,
                 ef=ef,
@@ -108,7 +111,8 @@ async def unpin_message(c: Alita, m: Message):
 @Alita.on_message(command("unpinall") & admin_filter)
 async def unpinall_message(_, m: Message):
 
-    await m.reply_text(
+    await eor(
+        m,
         "Do you really want to unpin all messages in this chat?",
         reply_markup=InlineKeyboardMarkup(
             [
@@ -128,7 +132,8 @@ async def unpinall_calllback(c: Alita, q: CallbackQuery):
     name = q.from_user.first_name
     user_status = (await q.message.chat.get_member(user_id)).status
     if user_status != "creator":
-        await q.message.edit(
+        await eor(
+            q,
             (
                 f"You're an admin {await mention_html(name, user_id)}, not owner!\n"
                 "Stay in your limits!"
@@ -138,13 +143,14 @@ async def unpinall_calllback(c: Alita, q: CallbackQuery):
     try:
         await c.unpin_all_chat_messages(q.message.chat.id)
         LOGGER.info(f"{q.from_user.id} unpinned all messages in {q.message.chat.id}")
-        await q.message.edit_text(tlang(q, "pin.unpinned_all_msg"))
+        await eor(q, text=tlang(q, "pin.unpinned_all_msg"))
     except ChatAdminRequired:
-        await q.message.edit_text(tlang(q, "admin.notadmin"))
+        await eor(q, text=tlang(q, "admin.notadmin"))
     except RightForbidden:
-        await q.message.edit_text(tlang(q, "pin.no_rights_unpin"))
+        await eor(q, text=tlang(q, "pin.no_rights_unpin"))
     except RPCError as ef:
-        await q.message.edit_text(
+        await eor(
+            q,
             (tlang(q, "general.some_error")).format(
                 SUPPORT_GROUP=SUPPORT_GROUP,
                 ef=ef,
@@ -161,7 +167,8 @@ async def anti_channel_pin(_, m: Message):
 
     if len(m.text.split()) == 1:
         status = pinsdb.get_settings["antichannelpin"]
-        await m.reply_text(
+        await eor(
+            m,
             tlang(m, "pin.antichannelpin.current_status").format(
                 status=status,
             ),
@@ -178,10 +185,10 @@ async def anti_channel_pin(_, m: Message):
             LOGGER.info(f"{m.from_user.id} disabled antichannelpin in {m.chat.id}")
             msg = tlang(m, "pin.antichannelpin.turned_off")
         else:
-            await m.reply_text(tlang(m, "general.check_help"))
+            await eor(m, text=tlang(m, "general.check_help"))
             return
 
-    await m.reply_text(msg)
+    await eor(m, text=msg)
     return
 
 
@@ -192,7 +199,8 @@ async def clean_linked(_, m: Message):
 
     if len(m.text.split()) == 1:
         status = pinsdb.get_settings["cleanlinked"]
-        await m.reply_text(
+        await eor(
+            m,
             tlang(m, "pin.antichannelpin.current_status").format(
                 status=status,
             ),
@@ -209,10 +217,10 @@ async def clean_linked(_, m: Message):
             LOGGER.info(f"{m.from_user.id} disabled CleanLinked in {m.chat.id}")
             msg = "Turned off CleanLinked! Messages from linked channel will not be deleted!"
         else:
-            await m.reply_text(tlang(m, "general.check_help"))
+            await eor(m, text=tlang(m, "general.check_help"))
             return
 
-    await m.reply_text(msg)
+    await eor(m, text=msg)
     return
 
 
@@ -223,10 +231,10 @@ async def perma_pin(_, m: Message):
         z = await m.reply_to_message.copy(m.chat.id)
         await z.pin()
     elif len(m.text.split()) > 1:
-        z = await m.reply_text(m.text.split(None, 1)[1])
+        z = await eor(m, text=m.text.split(None, 1)[1])
         await z.pin()
     else:
-        await m.reply_text("Reply to a message or enter text to pin it.")
+        await eor(m, text="Reply to a message or enter text to pin it.")
 
     return
 

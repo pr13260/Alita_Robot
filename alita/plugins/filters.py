@@ -29,7 +29,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import PREFIX_HANDLER
+from alita import PREFIX_HANDLER, eor
 from alita.bot_class import LOGGER, Alita
 from alita.database.filters_db import Filters
 from alita.utils.cmd_senders import send_cmd
@@ -57,7 +57,7 @@ async def view_filters(_, m: Message):
     actual_filters = [j for i in all_filters for j in i.split("|")]
 
     if not actual_filters:
-        await m.reply_text(f"There are no filters in {m.chat.title}")
+        await eor(m, text=f"There are no filters in {m.chat.title}")
         return
 
     filters_chat += "\n".join(
@@ -66,7 +66,7 @@ async def view_filters(_, m: Message):
             for i in all_filters
         ],
     )
-    await m.reply_text(filters_chat)
+    await eor(m, text=filters_chat)
     return
 
 
@@ -80,19 +80,21 @@ async def add_filter(_, m: Message):
     actual_filters = {j for i in all_filters for j in i.split("|")}
 
     if (len(all_filters) >= 50) and (len(actual_filters) >= 120):
-        await m.reply_text(
+        await eor(
+            m,
             "Only 50 filters and 120 aliases are allowed per chat!\nTo  add more filters, remove the existing ones.",
         )
         return
 
     if not m.reply_to_message and len(m.text.split()) < 3:
-        await m.reply_text(
+        await eor(
+            m,
             "Please provide keyboard keyword for this filter to reply with!",
         )
         return
 
     if m.reply_to_message and len(args) < 2:
-        await m.reply_text("Please provide keyword for this filter to reply with!")
+        await eor(m, text="Please provide keyword for this filter to reply with!")
         return
 
     extracted = await split_quotes(args[1])
@@ -100,7 +102,7 @@ async def add_filter(_, m: Message):
 
     for k in keyword.split("|"):
         if k in actual_filters:
-            await m.reply_text(f"Filter <code>{k}</code> already exists!")
+            await eor(m, text=f"Filter <code>{k}</code> already exists!")
             return
 
     teks, msgtype, file_id = await get_filter_type(m)
@@ -108,7 +110,8 @@ async def add_filter(_, m: Message):
     if not m.reply_to_message and len(m.text.split()) >= 2:
         teks, _ = await parse_button(extracted[1])
         if not teks:
-            await m.reply_text(
+            await eor(
+                m,
                 "There is no filter message - You can't JUST have buttons, you need a message to go with it!",
             )
             return
@@ -123,7 +126,8 @@ async def add_filter(_, m: Message):
         teks, _ = await parse_button(text_to_parsing)
 
     elif not teks and not msgtype:
-        await m.reply_text(
+        await eor(
+            m,
             'Please provide keyword for this filter reply with!\nEnclose filter in <code>"double quotes"</code>',
         )
         return
@@ -139,19 +143,21 @@ async def add_filter(_, m: Message):
 
         teks, _ = await parse_button(text_to_parsing)
         if (m.reply_to_message.text or m.reply_to_message.caption) and not teks:
-            await m.reply_text(
+            await eor(
+                m,
                 "There is no filter message - You can't JUST have buttons, you need a message to go with it!",
             )
             return
 
     else:
-        await m.reply_text("Invalid filter!")
+        await eor(m, text="Invalid filter!")
         return
 
     add = db.save_filter(m.chat.id, keyword, teks, msgtype, file_id)
     LOGGER.info(f"{m.from_user.id} added new filter ({keyword}) in {m.chat.id}")
     if add:
-        await m.reply_text(
+        await eor(
+            m,
             f"Saved filter for '<code>{', '.join(keyword.split('|'))}</code>' in <b>{m.chat.title}</b>!",
         )
     await m.stop_propagation()
@@ -164,26 +170,28 @@ async def stop_filter(_, m: Message):
     args = m.command
 
     if len(args) < 2:
-        await m.reply_text("What should I stop replying to?")
+        await eor(m, text="What should I stop replying to?")
         return
 
     chat_filters = db.get_all_filters(m.chat.id)
     act_filters = {j for i in chat_filters for j in i.split("|")}
 
     if not chat_filters:
-        await m.reply_text("No filters active here!")
+        await eor(m, text="No filters active here!")
         return
 
     for keyword in act_filters:
         if keyword == args[1]:
             db.rm_filter(m.chat.id, args[1])
             LOGGER.info(f"{m.from_user.id} removed filter ({keyword}) in {m.chat.id}")
-            await m.reply_text(
+            await eor(
+                m,
                 f"Okay, I'll stop replying to that filter and it's aliases in <b>{m.chat.title}</b>.",
             )
             await m.stop_propagation()
 
-    await m.reply_text(
+    await eor(
+        m,
         "That's not a filter - Click: /filters to get currently active filters.",
     )
     await m.stop_propagation()
@@ -199,10 +207,11 @@ async def rm_allfilters(_, m: Message):
 
     all_bls = db.get_all_filters(m.chat.id)
     if not all_bls:
-        await m.reply_text("No filters to stop in this chat.")
+        await eor(m, text="No filters to stop in this chat.")
         return
 
-    await m.reply_text(
+    await eor(
+        m,
         "Are you sure you want to clear all filters?",
         reply_markup=InlineKeyboardMarkup(
             [
@@ -225,7 +234,8 @@ async def rm_allfilters_callback(_, q: CallbackQuery):
     name = q.data.split(".")[-1]
     user_status = (await q.message.chat.get_member(user_id)).status
     if user_status != "creator":
-        await q.message.edit(
+        await eor(
+            q,
             (
                 f"You're an admin {await mention_html(name, user_id)}, not owner!\n"
                 "Stay in your limits!"
@@ -233,7 +243,7 @@ async def rm_allfilters_callback(_, q: CallbackQuery):
         )
         return
     db.rm_all_filters(q.message.chat.id)
-    await q.message.edit_text("Cleared all filters for {q.message.chat.id}")
+    await eor(q, text="Cleared all filters for {q.message.chat.id}")
     LOGGER.info(f"{user_id} removed all filter from {q.message.chat.id}")
     await q.answer("Cleared all Filters!", show_alert=True)
     return
@@ -244,7 +254,8 @@ async def send_filter_reply(c: Alita, m: Message, trigger: str):
     getfilter = db.get_filter(m.chat.id, trigger)
 
     if not getfilter:
-        await m.reply_text(
+        await eor(
+            m,
             "<b>Error:</b> Cannot find a type for this filter!!",
             quote=True,
         )
@@ -252,7 +263,7 @@ async def send_filter_reply(c: Alita, m: Message, trigger: str):
 
     msgtype = getfilter["msgtype"]
     if not msgtype:
-        await m.reply_text("<b>Error:</b> Cannot find a type for this filter!!")
+        await eor(m, text="<b>Error:</b> Cannot find a type for this filter!!")
         return
 
     try:
@@ -275,7 +286,7 @@ async def send_filter_reply(c: Alita, m: Message, trigger: str):
     text = await escape_mentions_using_curly_brackets(m, filter_reply, parse_words)
 
     if msgtype == Types.TEXT:
-        await m.reply_text(text, quote=True)
+        await eor(m, text=text, quote=True)
 
     elif msgtype in (
         Types.STICKER,

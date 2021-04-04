@@ -23,7 +23,7 @@ from traceback import format_exc
 from pyrogram.errors import MessageTooLong, PeerIdInvalid, UserIsBlocked
 from pyrogram.types import Message
 
-from alita import BOT_ID, LOGGER, MESSAGE_DUMP, SUPPORT_GROUP, SUPPORT_STAFF
+from alita import BOT_ID, LOGGER, MESSAGE_DUMP, SUPPORT_GROUP, SUPPORT_STAFF, eor
 from alita.bot_class import Alita
 from alita.database.antispam_db import GBan
 from alita.database.users_db import Users
@@ -41,11 +41,11 @@ db = GBan()
 async def gban(c: Alita, m: Message):
 
     if len(m.text.split()) == 1:
-        await m.reply_text(tlang(m, "antispam.gban.how_to"))
+        await eor(m, text=tlang(m, "antispam.gban.how_to"))
         return
 
     if len(m.text.split()) == 2 and not m.reply_to_message:
-        await m.reply_text(tlang(m, "antispam.gban.enter_reason"))
+        await eor(m, text=tlang(m, "antispam.gban.enter_reason"))
         return
 
     user_id, user_first_name, _ = await extract_user(c, m)
@@ -56,16 +56,17 @@ async def gban(c: Alita, m: Message):
         gban_reason = m.text.split(None, 2)[2]
 
     if user_id in SUPPORT_STAFF:
-        await m.reply_text(tlang(m, "antispam.part_of_support"))
+        await eor(m, text=tlang(m, "antispam.part_of_support"))
         return
 
     if user_id == BOT_ID:
-        await m.reply_text(tlang(m, "antispam.gban.not_self"))
+        await eor(m, text=tlang(m, "antispam.gban.not_self"))
         return
 
     if db.check_gban(user_id):
         db.update_gban_reason(user_id, gban_reason)
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "antispam.gban.updated_reason")).format(
                 gban_reason=gban_reason,
             ),
@@ -73,7 +74,8 @@ async def gban(c: Alita, m: Message):
         return
 
     db.add_gban(user_id, gban_reason, m.from_user.id)
-    await m.reply_text(
+    await eor(
+        m,
         (tlang(m, "antispam.gban.added_to_watch")).format(
             first_name=user_first_name,
         ),
@@ -114,22 +116,23 @@ async def gban(c: Alita, m: Message):
 async def ungban(c: Alita, m: Message):
 
     if len(m.text.split()) == 1:
-        await m.reply_text(tlang(m, "antispam.pass_user_id"))
+        await eor(m, text=tlang(m, "antispam.pass_user_id"))
         return
 
     user_id, user_first_name, _ = await extract_user(c, m)
 
     if user_id in SUPPORT_STAFF:
-        await m.reply_text(tlang(m, "antispam.part_of_support"))
+        await eor(m, text=tlang(m, "antispam.part_of_support"))
         return
 
     if user_id == BOT_ID:
-        await m.reply_text(tlang(m, "antispam.ungban.not_self"))
+        await eor(m, text=tlang(m, "antispam.ungban.not_self"))
         return
 
     if db.check_gban(user_id):
         db.remove_gban(user_id)
-        await m.reply_text(
+        await eor(
+            m,
             (tlang(m, "antispam.ungban.removed_from_list")).format(
                 first_name=user_first_name,
             ),
@@ -154,7 +157,7 @@ async def ungban(c: Alita, m: Message):
             LOGGER.error(format_exc())
         return
 
-    await m.reply_text(tlang(m, "antispam.ungban.non_gbanned"))
+    await eor(m, text=tlang(m, "antispam.ungban.non_gbanned"))
     return
 
 
@@ -162,7 +165,8 @@ async def ungban(c: Alita, m: Message):
     sudo_command(["numgbans", "countgbans", "gbancount", "gbanscount"]),
 )
 async def gban_count(_, m: Message):
-    await m.reply_text(
+    await eor(
+        m,
         (tlang(m, "antispam.num_gbans")).format(count=(db.count_gbans())),
     )
     LOGGER.info(f"{m.from_user.id} counting gbans in {m.chat.id}")
@@ -176,7 +180,7 @@ async def gban_list(_, m: Message):
     banned_users = db.load_from_db()
 
     if not banned_users:
-        await m.reply_text(tlang(m, "antispam.none_gbanned"))
+        await eor(m, text=tlang(m, "antispam.none_gbanned"))
         return
 
     banfile = tlang(m, "antispam.here_gbanned_start")
@@ -186,7 +190,7 @@ async def gban_list(_, m: Message):
             banfile += f"<b>Reason:</b> {user['reason']}\n"
 
     try:
-        await m.reply_text(banfile)
+        await eor(m, text=banfile)
     except MessageTooLong:
         with BytesIO(str.encode(await remove_markdown_and_html(banfile))) as f:
             f.name = "gbanlist.txt"

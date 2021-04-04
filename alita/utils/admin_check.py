@@ -20,7 +20,7 @@ from traceback import format_exc
 
 from pyrogram.types import CallbackQuery, Message
 
-from alita import DEV_USERS, LOGGER, OWNER_ID, SUDO_USERS
+from alita import DEV_USERS, LOGGER, OWNER_ID, SUDO_USERS, eor
 
 SUDO_LEVEL = SUDO_USERS + DEV_USERS + [int(OWNER_ID)]
 DEV_LEVEL = DEV_USERS + [int(OWNER_ID)]
@@ -45,9 +45,9 @@ async def admin_check(m: Message or CallbackQuery) -> bool:
     if user.status not in admin_strings:
         reply = "Nigga, you're not admin, don't try this explosive shit."
         try:
-            await m.edit_text(reply)
+            await eor(m, text=reply)
         except Exception as ef:
-            await m.reply_text(reply)
+            await eor(m, text=reply)
             LOGGER.error(ef)
             LOGGER.error(format_exc())
         return False
@@ -78,9 +78,9 @@ async def owner_check(m: Message or CallbackQuery) -> bool:
         else:
             reply = "You ain't even admin, what are you trying to do?"
         try:
-            await m.edit_text(reply)
+            await eor(m, text=reply)
         except Exception as ef:
-            await m.reply_text(reply)
+            await eor(m, text=reply)
             LOGGER.error(ef)
             LOGGER.error(format_exc())
 

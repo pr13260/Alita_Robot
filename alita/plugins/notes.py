@@ -28,7 +28,7 @@ from pyrogram.types import (
     Message,
 )
 
-from alita import LOGGER
+from alita import LOGGER, eor
 from alita.bot_class import Alita
 from alita.database.notes_db import Notes, NotesSettings
 from alita.utils.cmd_senders import send_cmd
@@ -55,17 +55,18 @@ async def save_note(_, m: Message):
     note_name = note_name.lower()
 
     if note_name in existing_notes:
-        await m.reply_text(f"This note ({note_name}) already exists!")
+        await eor(m, text=f"This note ({note_name}) already exists!")
         return
 
     if not note_name:
-        await m.reply_text(
+        await eor(
+            m,
             f"<code>{m.text}</code>\n\nError: You must give a name for this note!",
         )
         return
 
     if note_name.startswith("<") or note_name.startswith(">"):
-        await m.reply_text("Cannot save a note which starts with '<' or '>'")
+        await eor(m, text="Cannot save a note which starts with '<' or '>'")
         return
 
     if (
@@ -73,14 +74,16 @@ async def save_note(_, m: Message):
         and (data_type == Types.TEXT)
         and (not len(m.command) > 2)
     ):
-        await m.reply_text(
+        await eor(
+            m,
             f"<code>{m.text}</code>\n\nError: There is no text in here!",
         )
         return
 
     db.save_note(m.chat.id, note_name, text, data_type, content)
     LOGGER.info(f"{m.from_user.id} saved note ({note_name}) in {m.chat.id}")
-    await m.reply_text(
+    await eor(
+        m,
         f"Saved note <code>{note_name}</code>!\nGet it with <code>/get {note_name}</code> or <code>#{note_name}</code>",
     )
     return
@@ -192,7 +195,8 @@ async def get_note_func(c: Alita, m: Message, note_name, priv_notes_status):
                 )
                 return
             except RPCError as ef:
-                await m.reply_text(
+                await eor(
+                    m,
                     teks,
                     reply_markup=button,
                     disable_web_page_preview=True,
@@ -219,7 +223,7 @@ async def get_raw_note(c: Alita, m: Message, note: str):
     all_notes = [i[0] for i in db.get_all_notes(m.chat.id)]
 
     if note not in all_notes:
-        await m.reply_text("This note does not exists!")
+        await eor(m, text="This note does not exists!")
         return
 
     getnotes = db.get_note(m.chat.id, note)
@@ -227,12 +231,12 @@ async def get_raw_note(c: Alita, m: Message, note: str):
 
     msgtype = getnotes["msgtype"]
     if not getnotes:
-        await m.reply_text("<b>Error:</b> Cannot find a type for this note!!")
+        await eor(m, text="<b>Error:</b> Cannot find a type for this note!!")
         return
 
     if msgtype == Types.TEXT:
         teks = getnotes["note_value"]
-        await m.reply_text(teks, parse_mode=None, reply_to_message_id=msg_id)
+        await eor(m, text=teks, parse_mode=None, reply_to_message_id=msg_id)
     elif msgtype in (
         Types.STICKER,
         Types.VIDEO_NOTE,
@@ -293,7 +297,7 @@ async def get_note(c: Alita, m: Message):
         all_notes = [i[0] for i in db.get_all_notes(m.chat.id)]
 
         if note not in all_notes:
-            await m.reply_text("This note does not exists!")
+            await eor(m, text="This note does not exists!")
             return
 
         await get_note_func(c, m, note, priv_notes_status)
@@ -301,7 +305,7 @@ async def get_note(c: Alita, m: Message):
         note = ((m.text.split())[1]).lower()
         await get_raw_note(c, m, note)
     else:
-        await m.reply_text("Give me a note tag!")
+        await eor(m, text="Give me a note tag!")
         return
 
     return
@@ -325,12 +329,12 @@ async def priv_notes(_, m: Message):
             msg = "Set private notes to Off"
         else:
             msg = "Enter correct option"
-        await m.reply_text(msg)
+        await eor(m, text=msg)
     elif len(m.text.split()) == 1:
         curr_pref = db_settings.get_privatenotes(m.chat.id)
         msg = msg = f"Private Notes: {curr_pref}"
         LOGGER.info(f"{m.from_user.id} fetched privatenotes preference in {m.chat.id}")
-        await m.reply_text(msg)
+        await eor(m, text=msg)
     else:
         await m.replt_text("Check help on how to use this command!")
 
@@ -342,7 +346,7 @@ async def local_notes(_, m: Message):
     LOGGER.info(f"{m.from_user.id} listed all notes in {m.chat.id}")
     getnotes = db.get_all_notes(m.chat.id)
     if not getnotes:
-        await m.reply_text(f"There are no notes in <b>{m.chat.title}</b>.")
+        await eor(m, text=f"There are no notes in <b>{m.chat.title}</b>.")
         return
 
     msg_id = m.reply_to_message.message_id if m.reply_to_message else m.message_id
@@ -361,7 +365,8 @@ async def local_notes(_, m: Message):
                 ],
             ],
         )
-        await m.reply_text(
+        await eor(
+            m,
             "Click on the button below to get notes!",
             quote=True,
             reply_markup=pm_kb,
@@ -372,7 +377,7 @@ async def local_notes(_, m: Message):
     for x in getnotes:
         rply += f"- <code>{x[0]}</code>\n"
 
-    await m.reply_text(rply, reply_to_message_id=msg_id)
+    await eor(m, text=rply, reply_to_message_id=msg_id)
     return
 
 
@@ -380,17 +385,17 @@ async def local_notes(_, m: Message):
 async def clear_note(_, m: Message):
 
     if len(m.text.split()) <= 1:
-        await m.reply_text("What do you want to clear?")
+        await eor(m, text="What do you want to clear?")
         return
 
     note = m.text.split()[1]
     getnote = db.rm_note(m.chat.id, note)
     LOGGER.info(f"{m.from_user.id} cleared note ({note}) in {m.chat.id}")
     if not getnote:
-        await m.reply_text("This note does not exist!")
+        await eor(m, text="This note does not exist!")
         return
 
-    await m.reply_text(f"Note '`{note}`' deleted!")
+    await eor(m, text=f"Note '`{note}`' deleted!")
     return
 
 
@@ -399,10 +404,11 @@ async def clear_allnote(_, m: Message):
 
     all_notes = [i[0] for i in db.get_all_notes(m.chat.id)]
     if not all_notes:
-        await m.reply_text("No notes are there in this chat")
+        await eor(m, text="No notes are there in this chat")
         return
 
-    await m.reply_text(
+    await eor(
+        m,
         "Are you sure you want to clear all notes?",
         reply_markup=InlineKeyboardMarkup(
             [
@@ -425,7 +431,8 @@ async def clearallnotes_callback(_, q: CallbackQuery):
     name = q.from_user.first_name
     user_status = (await q.message.chat.get_member(user_id)).status
     if user_status != "creator":
-        await q.message.edit(
+        await eor(
+            q,
             (
                 f"You're an admin {await mention_html(name, user_id)}, not owner!\n"
                 "Stay in your limits!"
